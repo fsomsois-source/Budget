@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Budget</title>
+<link rel="manifest" href="data:application/json,{%22name%22:%22Budget%22,%22short_name%22:%22Budget%22,%22display%22:%22standalone%22,%22background_color%22:%22%2308080d%22,%22theme_color%22:%22%23e85d04%22,%22icons%22:[{%22src%22:%22icon.png%22,%22sizes%22:%22192x192%22,%22type%22:%22image/png%22}]}">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Budget">
+<link rel="apple-touch-icon" href="icon.png">
+<meta name="theme-color" content="#e85d04">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=Epilogue:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+html{width:100%;overflow-x:hidden;}
+body{background:#08080d;font-family:'Epilogue',sans-serif;color:#e8e0f8;-webkit-font-smoothing:antialiased;min-height:100vh;overflow-x:hidden;width:100%;}
+::-webkit-scrollbar{width:3px;}::-webkit-scrollbar-thumb{background:#2a2a3a;border-radius:99px;}
+.card{background:#10101a;border:1px solid rgba(255,255,255,.06);border-radius:20px;width:100%;box-sizing:border-box;}
+.stat{background:#181824;border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:.9rem 1rem;}
+.btn{cursor:pointer;border:none;border-radius:12px;font-family:'Epilogue',sans-serif;font-weight:600;font-size:.88rem;transition:all .18s;display:inline-flex;align-items:center;justify-content:center;gap:.4rem;}
+.btn:hover{filter:brightness(1.13);transform:translateY(-1px);}
+.btn:active{transform:translateY(0);}
+.btn-orange{background:linear-gradient(135deg,#e85d04,#f48c06);color:#fff;padding:.7rem 1.3rem;}
+.btn-green{background:linear-gradient(135deg,#059669,#10b981);color:#fff;padding:.7rem 1.3rem;}
+.btn-ghost{background:rgba(255,255,255,.05);color:#8080a0;padding:.65rem 1.2rem;border:1px solid rgba(255,255,255,.07);}
+.btn-blue{background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;padding:.7rem 1.3rem;}
+.btn-danger{cursor:pointer;background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.18);padding:.32rem .65rem;font-size:.75rem;border-radius:9px;font-family:'Epilogue',sans-serif;font-weight:600;transition:all .18s;}
+.btn-danger:hover{filter:brightness(1.2);}
+input,select,textarea{background:#181824;border:1px solid rgba(255,255,255,.09);border-radius:10px;color:#e8e0f8;font-family:'Epilogue',sans-serif;font-size:.92rem;padding:.65rem 1rem;outline:none;width:100%;transition:border .2s;}
+input:focus,select:focus,textarea:focus{border-color:#e85d04;}
+input::placeholder,textarea::placeholder{color:rgba(176,168,200,.35);}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23808080' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 1rem center;padding-right:2.5rem;-webkit-appearance:none;appearance:none;}
+label{font-size:.72rem;color:#606080;text-transform:uppercase;letter-spacing:.09em;font-weight:600;display:block;margin-bottom:.32rem;}
+.sec{font-size:.72rem;color:#505070;text-transform:uppercase;letter-spacing:.09em;font-weight:600;margin-bottom:.7rem;}
+.ptrack{height:8px;background:#1a1a2a;border-radius:99px;overflow:hidden;}
+.pfill{height:100%;border-radius:99px;transition:width .6s ease;}
+.tx{display:flex;align-items:center;gap:.75rem;padding:.65rem 0;border-bottom:1px solid rgba(255,255,255,.04);}
+.tx:last-child{border-bottom:none;}
+.budget-row{display:flex;align-items:center;gap:.65rem;padding:.6rem 0;border-bottom:1px solid rgba(255,255,255,.04);}
+.budget-row:last-child{border-bottom:none;}
+.emo-btn{width:36px;height:36px;border-radius:9px;border:2px solid transparent;background:#181824;cursor:pointer;font-size:1.1rem;display:inline-flex;align-items:center;justify-content:center;transition:all .15s;}
+.emo-btn.sel{border-color:#e85d04;background:rgba(232,93,4,.15);}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:50;display:flex;align-items:flex-end;justify-content:center;animation:fi .2s;}
+.drawer{background:#10101a;border:1px solid rgba(255,255,255,.08);border-radius:24px 24px 0 0;padding:1.8rem 1.4rem 2.4rem;width:100%;max-width:480px;animation:su .24s ease;max-height:92vh;overflow-y:auto;}
+.drawer-title{font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:800;margin-bottom:1.2rem;}
+.form-col{display:flex;flex-direction:column;gap:.85rem;}
+.form-row{display:flex;gap:.7rem;margin-top:.3rem;}
+@keyframes fi{from{opacity:0}to{opacity:1}}
+@keyframes su{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes ti{from{opacity:0;transform:translate(-50%,12px)}to{opacity:1;transform:translate(-50%,0)}}
+.toast{position:fixed;bottom:5.8rem;left:50%;transform:translateX(-50%);background:#1c1c2e;border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:.65rem 1.5rem;font-size:.88rem;font-weight:500;z-index:100;white-space:nowrap;animation:ti .22s ease;box-shadow:0 8px 32px rgba(0,0,0,.6);pointer-events:none;}
+.sync-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px;flex-shrink:0;}
+.sync-ok{background:#10b981;} .sync-pending{background:#f48c06;animation:pulse 1s infinite;} .sync-off{background:#f87171;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.nav{position:fixed;bottom:0;left:0;right:0;background:#0d0d18;border-top:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;padding:.65rem 0 1.1rem;z-index:40;width:100%;box-sizing:border-box;}
+.nav-item{display:flex;flex-direction:column;align-items:center;gap:.15rem;cursor:pointer;font-size:.5rem;font-weight:600;text-transform:uppercase;letter-spacing:0;color:#404060;transition:color .18s;padding:.2rem 0;flex:1;min-width:0;user-select:none;overflow:hidden;}
+.nav-item span:last-child{width:100%;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;padding:0 2px;}
+.nav-item.active{color:#f48c06;}
+.nav-icon{font-size:1.2rem;}
+.slider{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:99px;outline:none;cursor:pointer;}
+.slider::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#e85d04,#f48c06);cursor:pointer;border:3px solid #10101a;box-shadow:0 2px 10px rgba(232,93,4,.5);}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;}
+.page{display:flex;flex-direction:column;gap:1rem;width:100%;}
+.hidden{display:none;}
+.info-box{border-radius:12px;padding:.9rem 1rem;font-size:.85rem;line-height:1.6;}
+.info-orange{background:rgba(232,93,4,.08);border:1px solid rgba(232,93,4,.15);color:#f0c090;}
+.info-red{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.15);color:#fca5a5;}
+.info-green{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2);color:#6ee7b7;}
+.info-blue{background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);color:#93c5fd;}
+.debt-hist-row{display:flex;justify-content:space-between;padding:.33rem 0;border-bottom:1px solid rgba(255,255,255,.03);font-size:.82rem;}
+.debt-hist-row:last-child{border-bottom:none;}
+.plafond-card{background:linear-gradient(135deg,#0d1f0d,#0a1a2a);border:1px solid rgba(16,185,129,.2);border-radius:20px;padding:1.4rem;}
+.plafond-number{font-family:'Syne',sans-serif;font-size:2.8rem;font-weight:900;color:#10b981;line-height:1;}
+.breakdown-row{display:flex;justify-content:space-between;align-items:center;padding:.45rem 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:.85rem;}
+.breakdown-row:last-child{border-bottom:none;}
+/* Projection table */
+.proj-table{width:100%;border-collapse:collapse;font-size:.8rem;}
+.proj-table th{background:#1a1a2e;color:#8080a0;font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-size:.68rem;padding:.6rem .8rem;text-align:left;border-bottom:1px solid rgba(255,255,255,.08);}
+.proj-table td{padding:.6rem .8rem;border-bottom:1px solid rgba(255,255,255,.04);color:#e8e0f8;}
+.proj-table tr:last-child td{border-bottom:none;}
+.proj-table .positive{color:#10b981;font-weight:700;}
+.proj-table .negative{color:#f87171;font-weight:700;}
+.proj-table .highlight{background:rgba(232,93,4,.06);}
+/* Cat edit row */
+.cat-edit-row{display:flex;align-items:center;gap:.6rem;padding:.5rem 0;border-bottom:1px solid rgba(255,255,255,.04);}
+.cat-edit-row:last-child{border-bottom:none;}
+/* Login screen */
+.login-screen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;}
+</style>
+</head>
+<body>
+
+<!-- Login / Sync screen -->
+
+
+
+<!-- Main app -->
+<div id="app">
+  <div id="main" style="width:100%;padding:1.4rem .6rem 6rem;box-sizing:border-box;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.3rem;">
+      <div>
+        <div style="font-family:'Syne',sans-serif;font-size:1.9rem;font-weight:900;background:linear-gradient(135deg,#e85d04,#f48c06);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">BUDGET</div>
+        <div id="hdr-sub" style="font-size:.7rem;color:#505070;margin-top:-4px;letter-spacing:.05em;"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:.8rem;">
+        <button id="btn-save-quick" title="Sauvegarder" style="background:none;border:none;cursor:pointer;font-size:1rem;opacity:.35;padding:.2rem;transition:opacity .2s;" onclick="quickSave()">💾</button>
+      </div>
+    </div>
+    <div id="page-dashboard"  class="page"></div>
+    <div id="page-cashflow"   class="page hidden"></div>
+    <div id="page-plafond"    class="page hidden"></div>
+    <div id="page-debts"      class="page hidden"></div>
+    <div id="page-projection" class="page hidden"></div>
+    <div id="page-settings"   class="page hidden"></div>
+  </div>
+  <nav class="nav">
+    <div class="nav-item active" data-tab="dashboard"><span class="nav-icon">📊</span><span>Board</span></div>
+    <div class="nav-item" data-tab="cashflow"><span class="nav-icon">💸</span><span>Flux</span></div>
+    <div class="nav-item" data-tab="plafond"><span class="nav-icon">💳</span><span>CB</span></div>
+    <div class="nav-item" data-tab="debts"><span class="nav-icon">💚</span><span>Vini</span></div>
+    <div class="nav-item" data-tab="projection"><span class="nav-icon">📅</span><span>Tréso</span></div>
+    <div class="nav-item" data-tab="settings"><span class="nav-icon">⚙️</span><span>Config</span></div>
+  </nav>
+  <div id="overlay" class="overlay hidden"><div class="drawer" id="drawer-content"></div></div>
+  <div id="toast" class="toast hidden"></div>
+</div>
+
+<!-- Firebase SDKs -->
+<script>
+/* ── Default categories ── */
+const DEFAULT_CATS = [
+  {id:"logement",  label:"Logement",     icon:"🏠", weight:30},
+  {id:"alim",      label:"Alimentation", icon:"🛒", weight:20},
+  {id:"transport", label:"Transport",    icon:"🚗", weight:12},
+  {id:"sante",     label:"Santé",        icon:"💊", weight:8},
+  {id:"abos",      label:"Abonnements",  icon:"📱", weight:7},
+  {id:"loisirs",   label:"Loisirs",      icon:"🎉", weight:10},
+  {id:"vetements", label:"Vêtements",    icon:"👗", weight:6},
+  {id:"autre",     label:"Autre",        icon:"📦", weight:7},
+];
+const DEBT_ICONS   = ["💳","🏦","🚗","🏥","📱","🏠","🎓","💼","⚡","👨‍👩‍👧"];
+const DEFAULT_INCOME_TYPES = ["💼 Freelance","🏆 Prime","🎁 Virement","📈 Investissement","🤝 Aide","💰 Autre","↩️ Remboursement"];
+const CAT_ICONS    = ["🏠","🛒","🚗","💊","📱","🎉","👗","📦","🍽️","🎓","💡","🏋️","🐶","🌿","🎮","✈️","🏖️","💈","🎨","🧴","🧸","🏥","📚","🎵","🔧","🛍️","💻","📸","💸","↩️","🔄","🏧","💰","🎁","🤝","⚽","🚿","🧹","🪴","🍷","☕","🚌","🚂","🛳️","🎪","🎭","🎬","🏨","🔑","📋","🩺","💉","🧳","🎒","👶","🧒","👴","🌍"];
+
+/* ── State ── */
+let state = {incomes:[], expenses:[], debts:[], recurring:[], cats: DEFAULT_CATS.map(c=>({...c})), incomeTypes: [...DEFAULT_INCOME_TYPES], soldeDepart: 0, soldeDateRef: "", limiteCBDiff: 0, jourBascule: 20, enveloppeCB: 0, revolut_virements: [], differeEnAttente: 0, margeCible: 0};
+let currentTab = "dashboard";
+let simVal     = 80;
+let toastTimer = null;
+let saveTimer  = null;
+
+/* ── LocalStorage ── */
+function saveState(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(()=>{
+    try { localStorage.setItem("budget_data", JSON.stringify(state)); } catch(e){}
+  }, 400);
+}
+
+function loadState(){
+  try {
+    const raw = localStorage.getItem("budget_data");
+    if(raw){ state = Object.assign({incomes:[],expenses:[],debts:[],recurring:[],cats:DEFAULT_CATS.map(c=>({...c})),incomeTypes:[...DEFAULT_INCOME_TYPES],soldeDepart:0,soldeDateRef:"",limiteCBDiff:0,jourBascule:20,enveloppeCB:0,revolut_virements:[],differeEnAttente:0}, JSON.parse(raw)); }
+    if(!state.cats||!state.cats.length) state.cats = DEFAULT_CATS.map(c=>({...c}));
+    if(!state.incomeTypes||!state.incomeTypes.length) state.incomeTypes = [...DEFAULT_INCOME_TYPES];
+    if(!state.revolut_virements) state.revolut_virements = [];
+    if(!state.differeEnAttente) state.differeEnAttente = 0;
+  } catch(e){}
+}
+
+/* ── Helpers ── */
+const fmt    = n => new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR",minimumFractionDigits:2,maximumFractionDigits:2}).format(n||0);
+const fmtD   = iso => { try{ return new Date(iso).toLocaleDateString("fr-FR",{day:"2-digit",month:"short"}); }catch(e){ return ""; } };
+const uid    = () => Math.random().toString(36).slice(2,9);
+const today  = () => new Date().toISOString().slice(0,10);
+const thisM  = () => new Date().toISOString().slice(0,7);
+const monthOf= off => { const d=new Date(); d.setMonth(d.getMonth()+(off||0)); return d.toISOString().slice(0,7); };
+const monthLbl=off => { const d=new Date(); d.setMonth(d.getMonth()+(off||0)); return d.toLocaleDateString("fr-FR",{month:"long",year:"numeric"}); };
+const clamp  = (v,a,b) => Math.max(a,Math.min(b,v));
+const barCol = pct => pct>100?"linear-gradient(90deg,#ef4444,#f87171)":pct>85?"linear-gradient(90deg,#d97706,#facc15)":"linear-gradient(90deg,#059669,#10b981)";
+const sumOf  = (arr,m) => arr.filter(x=>(x.date||"").startsWith(m||thisM())).reduce((a,x)=>a+(x.amount||0),0);
+const getCats= () => state.cats && state.cats.length ? state.cats : DEFAULT_CATS.map(c=>({...c}));
+
+/* ── Recurring injection ── */
+function injectRecurring(){
+  if(!state.recurring||!state.recurring.length) return;
+  const m = thisM();
+  let changed = false;
+  state.recurring.forEach(r => {
+    // Vérifier date de fin
+    if(r.dateFin && m > r.dateFin) return;
+    const tag = r.id+":"+m;
+    const isExpense = r.kind === "expense";
+    const alreadyDone = isExpense
+      ? state.expenses.some(x=>x.recurringTag===tag)
+      : state.incomes.some(x=>x.recurringTag===tag);
+    if(alreadyDone) return;
+    const count = r.frequency==="weekly"?4:1;
+    for(let i=0;i<count;i++){
+      const d = new Date();
+      if(r.frequency==="weekly") d.setDate(1+(i*7));
+      else d.setDate(Math.min(r.dayOfMonth||1,new Date(d.getFullYear(),d.getMonth()+1,0).getDate()));
+      if(d > new Date()) continue; // Ne pas générer les dates futures
+      if(isExpense){
+        state.expenses.push({id:uid(),amount:r.amount,catId:r.catId||"autre",
+          label:(r.label)+(count>1?` (sem.${i+1})`:"")+` 🔄`,
+          date:d.toISOString().slice(0,10),recurringTag:tag,fromRecurring:r.id,cbDiff:!!r.cbDiff});
+      } else {
+        state.incomes.push({id:uid(),amount:r.amount,type:r.type||"💰 Autre",
+          note:(r.label||r.type)+(count>1?` (sem.${i+1})`:"")+` 🔄`,
+          date:d.toISOString().slice(0,10),recurringTag:tag,fromRecurring:r.id});
+      }
+      changed=true;
+    }
+  });
+  if(changed) saveState();
+}
+
+/* ── Plafond engine ── */
+function computePlafond(avgIncome){
+  if(avgIncome<=0) return null;
+  // Récurrents fixes mensuels
+  const recurFixe = state.recurring
+    .filter(r=>r.kind==="expense"&&r.frequency==="monthly")
+    .reduce((a,r)=>a+(r.amount||0),0);
+  // Découvert à combler (solde négatif)
+  const decouvert = Math.max(0, -(state.soldeDepart||0));
+  // Débit différé conseillé = revenus − charges récurrentes fixes − découvert à combler
+  const differeConseille = Math.max(0, Math.round(avgIncome - recurFixe - decouvert));
+  return {differeConseille, recurFixe, decouvert};
+}
+
+/* ── Computed ── */
+function computed(){
+  const m         = thisM();
+  const cats      = getCats();
+  const todayStr  = today();
+  // Exclure les remboursements du calcul des revenus
+  const incomesSansRemb = state.incomes.filter(x=>!x.type?.includes("Remboursement"));
+  const monthIncome  = sumOf(incomesSansRemb.filter(x=>x.date<=todayStr),m);
+  const monthDebtPay = sumOf(state.expenses.filter(e=>e.catId==="dettes"&&e.date<=todayStr),m);
+  const monthExpense = sumOf(state.expenses.filter(e=>e.catId!=="dettes"&&e.date<=todayStr),m);
+  // Solde fin de mois = (soldeDepart − différé en attente) + toutes transactions après date de référence
+  const dateRef = state.soldeDateRef||todayStr;
+  const totalIncApres = state.incomes.filter(x=>x.date>dateRef&&!x.cbRevolut).reduce((a,x)=>a+(x.amount||0),0);
+  const totalExpApres = state.expenses.filter(x=>x.date>dateRef&&!x.cbDiff).reduce((a,x)=>a+(x.amount||0),0);
+  const balance = (state.soldeDepart||0) - (state.differeEnAttente||0) + totalIncApres - totalExpApres;
+  const spentByCat   = {};
+  cats.forEach(c=>{ spentByCat[c.id]=state.expenses.filter(e=>e.catId===c.id&&(e.date||"").startsWith(m)&&e.date<=todayStr).reduce((a,x)=>a+x.amount,0); });
+  const totalDebt    = state.debts.reduce((a,d)=>a+(d.remaining||0),0);
+  const totalOrig    = state.debts.reduce((a,d)=>a+(d.total||0),0);
+  const inc3         = [0,1,2].map(i=>sumOf(incomesSansRemb.filter(x=>x.date<=todayStr),monthOf(-i))).filter(v=>v>0);
+  const avgIncome    = inc3.length?inc3.reduce((a,v)=>a+v,0)/inc3.length:monthIncome;
+  const plafondData  = computePlafond(avgIncome);
+  const barData      = Array.from({length:5},(_,i)=>{const bd=new Date();bd.setMonth(bd.getMonth()-4+i);const bmm=bd.toISOString().slice(0,7);return{m:bd.toLocaleDateString("fr-FR",{month:"short"}),revenus:sumOf(state.incomes,bmm),depenses:state.expenses.filter(e=>(e.date||"").startsWith(bmm)).reduce((a,x)=>a+x.amount,0)};});
+  const recentTx     = [...state.incomes.map(x=>({...x,_k:"in"})),...state.expenses.map(x=>({...x,_k:"out"}))].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,10);
+  return {monthIncome,monthDebtPay,monthExpense,balance,spentByCat,totalDebt,totalOrig,avgIncome,plafondData,barData,recentTx};
+}
+
+/* ── DOM helpers ── */
+function notify(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.remove("hidden"); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.add("hidden"),2800); }
+function confirmAction(msg, fn){ if(confirm(msg)) fn(); }
+// Extrait le 1er emoji d'un type (ex: "💰 Vini" -> "💰", "💰Vini" -> "💰")
+function typeIcon(t){ if(!t) return "💰"; const arr=Array.from(t.trim()); return arr[0]||"💰"; }
+function el(tag,cs,st,ch){ const e=document.createElement(tag); if(cs) e.className=cs; if(st) Object.assign(e.style,st); if(ch){ (Array.isArray(ch)?ch:[ch]).forEach(c=>{ if(c==null) return; if(typeof c==="string"||typeof c==="number") e.appendChild(document.createTextNode(c)); else e.appendChild(c); }); } return e; }
+function div(cs,st,ch){ return el("div",cs,st,ch); }
+function span(txt,st){ const s=el("span"); s.textContent=txt; if(st) Object.assign(s.style,st); return s; }
+function btn(label,cls,onClick){ const b=el("button","btn "+(cls||"btn-ghost")); b.innerHTML=label; if(onClick) b.addEventListener("click",onClick); return b; }
+function makeProgress(pct,color,h){ h=h||8; const tr=div("ptrack",{height:h+"px"}); const fi=div("pfill",{width:clamp(pct,0,100)+"%",background:color||"linear-gradient(90deg,#e85d04,#f48c06)"}); tr.appendChild(fi); return tr; }
+function mkInp(t,ph,val){ const i=el("input"); i.type=t||"text"; if(ph) i.placeholder=ph; if(val!==undefined&&val!=="") i.value=val; return i; }
+function mkSel(opts,val){ const s=el("select"); opts.forEach(o=>{ const opt=el("option"); if(typeof o==="object"){opt.value=o.value;opt.textContent=o.label;if(o.value===val)opt.selected=true;}else{opt.value=o;opt.textContent=o;if(o===val)opt.selected=true;} s.appendChild(opt); }); return s; }
+function mkField(lbl,inp){ const w=el("div"); const l=el("label"); l.textContent=lbl; w.appendChild(l); w.appendChild(inp); return w; }
+function makeStatBox(label,value,color,small){ const b=div("stat"); const l=div("sec"); l.textContent=label; b.appendChild(l); const v=el("div"); v.style.cssText=`font-family:'Syne',sans-serif;font-size:${small?"1rem":"1.3rem"};font-weight:800;color:${color||"#e8e0f8"}`; v.textContent=value; b.appendChild(v); return b; }
+function makeInfoBox(cls,html){ const b=div("info-box "+cls); b.innerHTML=html; return b; }
+
+/* ── SVG Charts ── */
+function makeAreaChart(data,keyA,keyB,cA,cB,h){
+  cA=cA||"#e85d04"; cB=cB||"#10b981"; h=h||160;
+  if(!data||data.length<2) return document.createTextNode("");
+  const ns="http://www.w3.org/2000/svg",W=340,H=h,pl=44,pr=10,pt=10,pb=28,iW=W-pl-pr,iH=H-pt-pb;
+  const allV=[...data.map(d=>d[keyA]||0),...(keyB?data.map(d=>d[keyB]||0):[])];
+  const maxV=Math.max(...allV,1);
+  const xP=i=>pl+(i/(data.length-1))*iW;
+  const yP=v=>pt+iH-(v/maxV)*iH;
+  const pathD=key=>data.map((d,i)=>`${i===0?"M":"L"}${xP(i).toFixed(1)},${yP(d[key]||0).toFixed(1)}`).join(" ");
+  const areaD=key=>`${pathD(key)} L${xP(data.length-1).toFixed(1)},${(pt+iH).toFixed(1)} L${pl},${(pt+iH).toFixed(1)} Z`;
+  const svg=document.createElementNS(ns,"svg"); svg.setAttribute("viewBox",`0 0 ${W} ${H}`); svg.style.cssText=`width:100%;height:${H}px;`;
+  const defs=document.createElementNS(ns,"defs");
+  const mkG=(id,c,o)=>{ const g=document.createElementNS(ns,"linearGradient"); g.setAttribute("id",id); ["x1","y1","x2","y2"].forEach((k,i)=>g.setAttribute(k,["0","0","0","1"][i])); [{o:"0%",op:o},{o:"100%",op:"0"}].forEach(({o:off,op})=>{ const s=document.createElementNS(ns,"stop"); s.setAttribute("offset",off); s.setAttribute("stop-color",c); s.setAttribute("stop-opacity",op); g.appendChild(s); }); return g; };
+  const idA="lgA"+Math.random().toString(36).slice(2,6),idB="lgB"+Math.random().toString(36).slice(2,6);
+  defs.appendChild(mkG(idA,cA,"0.28")); if(keyB) defs.appendChild(mkG(idB,cB,"0.2")); svg.appendChild(defs);
+  [0,.5,1].forEach(r=>{ const v=Math.round(maxV*r),y=yP(maxV*r); const ln=document.createElementNS(ns,"line"); ["x1","y1","x2","y2","stroke","stroke-width"].forEach((k,i)=>[pl,y,W-pr,y,"rgba(255,255,255,.05)","1"].forEach((v2,j)=>i===j&&ln.setAttribute(k,v2))); svg.appendChild(ln); const t=document.createElementNS(ns,"text"); t.setAttribute("x",pl-4); t.setAttribute("y",y+4); t.setAttribute("text-anchor","end"); t.setAttribute("fill","#505070"); t.setAttribute("font-size","9"); t.textContent=v>=1000?Math.round(v/1000)+"k":v; svg.appendChild(t); });
+  const addA=(key,gid,col,dash)=>{ const a=document.createElementNS(ns,"path"); a.setAttribute("d",areaD(key)); a.setAttribute("fill",`url(#${gid})`); svg.appendChild(a); const p=document.createElementNS(ns,"path"); p.setAttribute("d",pathD(key)); p.setAttribute("fill","none"); p.setAttribute("stroke",col); p.setAttribute("stroke-width","2"); p.setAttribute("stroke-linejoin","round"); if(dash) p.setAttribute("stroke-dasharray","5,3"); svg.appendChild(p); };
+  addA(keyA,idA,cA,false); if(keyB) addA(keyB,idB,cB,true);
+  [0,Math.floor((data.length-1)/2),data.length-1].forEach(i=>{ const t=document.createElementNS(ns,"text"); t.setAttribute("x",xP(i)); t.setAttribute("y",H-6); t.setAttribute("text-anchor","middle"); t.setAttribute("fill","#505070"); t.setAttribute("font-size","9"); t.textContent=(data[i]&&data[i].m)||""; svg.appendChild(t); });
+  return svg;
+}
+function makeBarChart(data,h){
+  h=h||130; if(!data||!data.length) return document.createTextNode("");
+  const ns="http://www.w3.org/2000/svg",W=340,H=h,pl=10,pr=8,pt=8,pb=24,iW=W-pl-pr,iH=H-pt-pb;
+  const maxV=Math.max(...data.map(d=>Math.max(d.revenus||0,d.depenses||0)),1);
+  const bw=Math.floor(iW/data.length*0.32),gap=iW/data.length;
+  const svg=document.createElementNS(ns,"svg"); svg.setAttribute("viewBox",`0 0 ${W} ${H}`); svg.style.cssText=`width:100%;height:${H}px;`;
+  data.forEach((d,i)=>{ const cx=pl+gap*i+gap/2,hR=((d.revenus||0)/maxV)*iH,hD=((d.depenses||0)/maxV)*iH; const mk=(x,y,w,h2,fill)=>{ const r=document.createElementNS(ns,"rect"); [["x",x],["y",y],["width",w],["height",Math.max(h2,1)],["fill",fill],["rx","3"]].forEach(([k,v])=>r.setAttribute(k,v)); svg.appendChild(r); }; mk(cx-bw-1,pt+iH-hR,bw,hR,"#10b981"); mk(cx+1,pt+iH-hD,bw,hD,"#f87171"); const t=document.createElementNS(ns,"text"); t.setAttribute("x",cx); t.setAttribute("y",H-6); t.setAttribute("text-anchor","middle"); t.setAttribute("fill","#505070"); t.setAttribute("font-size","9"); t.textContent=d.m; svg.appendChild(t); });
+  return svg;
+}
+
+/* ════════════════════════════════════
+   PAGE : DASHBOARD
+════════════════════════════════════ */
+function renderDashboard(c){
+  c.innerHTML="";
+  const cv=computed();
+  const ml=div("",{textAlign:"center"}); const ms=div("sec"); ms.style.marginBottom="0";
+  const now2=new Date(); ms.textContent=now2.toLocaleDateString("fr-FR",{weekday:"long",day:"2-digit",month:"long",year:"numeric"});
+  ml.appendChild(ms); c.appendChild(ml);
+
+  // ── Marge = solde fin de mois − virements Revolut du cycle en cours (cycle 20→20) ──
+  { const today2m=new Date(); today2m.setHours(0,0,0,0);
+    const todayDayM=today2m.getDate();
+    const startCycleM=new Date(today2m);
+    if(todayDayM>=20){ startCycleM.setDate(20); startCycleM.setHours(0,0,0,0); }
+    else { startCycleM.setMonth(today2m.getMonth()-1); startCycleM.setDate(20); startCycleM.setHours(0,0,0,0); }
+    const startCycleStrM=startCycleM.toISOString().slice(0,10);
+    const virCycle=(state.revolut_virements||[])
+      .filter(v=>v.date>=startCycleStrM)
+      .reduce((s,v)=>s+(v.amount||0),0);
+    const ep=cv.balance-virCycle;
+    const cible=state.margeCible||0;
+    const hdrRight=document.querySelector("#main > div:first-child > div:last-child");
+    if(hdrRight&&!hdrRight.querySelector(".ep-tag")&&(state.incomes.length||state.soldeDepart)){
+      const tag=el("div"); tag.className="ep-tag";
+      tag.style.cssText=`font-size:.68rem;font-weight:600;color:${ep>=0?"#10b981":"#f87171"};opacity:.7;text-align:right;line-height:1.3;`;
+      const cibleStr=cible>0?`<span style="color:#404060;font-weight:400;font-size:.62rem;"> / ${cible>=0?"+":""}${fmt(cible)}</span>`:"";
+      tag.innerHTML=`<span style="color:#404060;font-weight:400;">marge</span><br>${ep>=0?"+":""}${fmt(ep)}${cibleStr}`;
+      hdrRight.insertBefore(tag,hdrRight.firstChild);
+    }
+  }
+
+  // Même calcul que page CB : virements du mois − achats CB
+  const nowM=new Date().toISOString().slice(0,7);
+  const totalVirementsBoard=(state.revolut_virements||[]).filter(v=>v.date.startsWith(nowM)).reduce((s,v)=>s+(v.amount||0),0);
+  const totalCreditsBoard=state.incomes.filter(x=>x.cbRevolut).reduce((a,x)=>a+(x.amount||0),0);
+  const totalAchatsBoard=state.expenses.filter(x=>x.cbDiff).reduce((a,x)=>a+(x.amount||0),0)-totalCreditsBoard;
+  const resteDebit2=Math.max(0,totalVirementsBoard-totalAchatsBoard);
+
+  // Solde aujourd'hui = solde réel + transactions depuis date de référence jusqu'à aujourd'hui
+  const todayStr2=today();
+  const dateRef3=state.soldeDateRef||todayStr2;
+  const incAujourd=state.incomes.filter(x=>x.date>dateRef3&&x.date<=todayStr2&&!x.cbRevolut).reduce((a,x)=>a+(x.amount||0),0);
+  const expAujourd=state.expenses.filter(x=>x.date>dateRef3&&x.date<=todayStr2&&!x.cbDiff).reduce((a,x)=>a+(x.amount||0),0);
+  const soldeAujourd=(state.soldeDepart||0)+incAujourd-expAujourd;
+
+  // Deux grandes cartes solde
+  const soldeRow=div("",{display:"grid",gridTemplateColumns:"1fr 1fr",gap:".7rem",marginBottom:".7rem"});
+  const cardAujourd=div("card",{padding:"1rem 1.1rem",background:soldeAujourd>=0?"rgba(16,185,129,.06)":"rgba(239,68,68,.06)",border:soldeAujourd>=0?"1px solid rgba(16,185,129,.2)":"1px solid rgba(239,68,68,.2)"});
+  cardAujourd.innerHTML=`<div class="sec" style="margin-bottom:.2rem;">Aujourd'hui</div><div style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:900;color:${soldeAujourd>=0?"#10b981":"#f87171"};">${fmt(soldeAujourd)}</div>`;
+  const cardFinMois=div("card",{padding:"1rem 1.1rem",background:cv.balance>=0?"rgba(16,185,129,.06)":"rgba(239,68,68,.06)",border:cv.balance>=0?"1px solid rgba(16,185,129,.2)":"1px solid rgba(239,68,68,.2)"});
+  cardFinMois.innerHTML=`<div class="sec" style="margin-bottom:.2rem;">Fin de mois</div><div style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:900;color:${cv.balance>=0?"#10b981":"#f87171"};">${fmt(cv.balance)}</div>`;
+  soldeRow.appendChild(cardAujourd); soldeRow.appendChild(cardFinMois);
+  c.appendChild(soldeRow);
+
+  const g4=div("",{display:"grid",gridTemplateColumns:"1fr 1fr",gap:".7rem"});
+  g4.appendChild(makeStatBox("💳 Reste CB Revolut",fmt(resteDebit2),resteDebit2>0?"#f48c06":"#f87171",true));
+  g4.appendChild(makeStatBox("💚 Vini",fmt(cv.totalDebt),"#f48c06",true));
+  c.appendChild(g4);
+
+  // Dû par Vini — affiché uniquement en haut à droite, pas ici
+
+  // Transactions à venir uniquement
+  // Récurrents futurs pas encore générés
+  const todayD=new Date(); todayD.setHours(0,0,0,0);
+  const curM=new Date().toISOString().slice(0,7);
+  const futureRec=[];
+  const todayDay=new Date().getDate();
+  state.recurring.filter(r=>r.kind==="expense"&&r.frequency==="monthly").forEach(r=>{
+    const dom=r.dayOfMonth||1;
+    if(dom<=todayDay) return;
+    const rTag=r.id+":"+curM;
+    if(state.expenses.some(x=>x.recurringTag===rTag)) return;
+    if(r.dateFin&&curM>r.dateFin) return;
+    const yr=new Date().getFullYear(), mo=new Date().getMonth()+1;
+    const dStr=`${yr}-${String(mo).padStart(2,'0')}-${String(dom).padStart(2,'0')}`;
+    futureRec.push({id:"rec-"+r.id,amount:r.amount,label:r.label,date:dStr,catId:r.catId,_k:"out"});
+  });
+  const txAVenir = [...state.incomes.filter(x=>x.date>today()&&!x.cbRevolut).map(x=>({...x,_k:"in"})),...state.expenses.filter(x=>x.date>today()).map(x=>({...x,_k:"out"})),...futureRec].sort((a,b)=>new Date(a.date)-new Date(b.date)).slice(0,15);
+  const rtl=div("sec"); rtl.textContent="Transactions à venir"; c.appendChild(rtl);
+  if(!txAVenir.length){ const e=div("card",{padding:"1.5rem",textAlign:"center",color:"#505070",fontSize:".85rem"}); e.textContent="Aucune transaction à venir — saisis tes récurrents dans Flux !"; c.appendChild(e); }
+  else { const rtc=div("card",{padding:"0 1.1rem"}); txAVenir.forEach(tx=>rtc.appendChild(makeTxRow(tx))); c.appendChild(rtc); }
+}
+
+function makeTxRow(tx){
+  const cats=getCats(); const cat=cats.find(c=>c.id===tx.catId);
+  const row=div("tx");
+  const ico=span(tx._k==="in"?typeIcon(tx.type):(cat&&cat.icon)||"💸"); ico.style.fontSize="1.2rem";
+  const info=el("div"); info.style.cssText="flex:1;min-width:0;";
+  const nm=el("div"); nm.style.cssText="font-size:.86rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"; nm.textContent=tx._k==="in"?(tx.note||tx.type):(tx.label||(cat&&cat.label)||"Dépense");
+  const dt=el("div"); dt.style.cssText="font-size:.71rem;color:#505070;"; dt.textContent=fmtD(tx.date);
+  info.appendChild(nm); info.appendChild(dt);
+  const amt=span(`${tx._k==="in"?"+":"-"}${fmt(tx.amount)}`); amt.style.cssText=`font-weight:700;color:${tx._k==="in"?"#10b981":"#f87171"};font-size:.92rem;flex-shrink:0;`;
+  row.appendChild(ico); row.appendChild(info); row.appendChild(amt);
+  return row;
+}
+
+/* ════════════════════════════════════
+   PAGE : CASHFLOW
+════════════════════════════════════ */
+function renderCashflow(c){
+  c.innerHTML="";
+  const now=new Date(); now.setHours(0,0,0,0);
+  const {year,month}=getFluxMonth();
+  const monthStr=`${year}-${String(month+1).padStart(2,"0")}`;
+  const cats2=getCats();
+  const isPast=dateStr=>new Date(dateStr+"T00:00:00")<=now;
+
+  // Navigation mois
+  const navRow=div("",{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"1rem"});
+  const prevBtn=btn("‹","btn btn-ghost",()=>{ fluxMonthOffset--; renderCashflow(c); }); prevBtn.style.cssText="padding:.5rem .9rem;font-size:1.2rem;";
+  const monthLblEl=el("div"); monthLblEl.style.cssText="font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;text-transform:capitalize;";
+  monthLblEl.textContent=fluxMonthLabel();
+  const nextBtn=btn("›","btn btn-ghost",()=>{ fluxMonthOffset++; renderCashflow(c); }); nextBtn.style.cssText="padding:.5rem .9rem;font-size:1.2rem;";
+  if(fluxMonthOffset===0) nextBtn.disabled=true;
+  navRow.appendChild(prevBtn); navRow.appendChild(monthLblEl); navRow.appendChild(nextBtn);
+  c.appendChild(navRow);
+
+  // Boutons ajout (mois actuel seulement)
+  if(fluxMonthOffset===0){
+    const g3=el("div"); g3.style.cssText="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem;margin-bottom:1rem;";
+    const ba=btn('<span style="font-size:1.2rem">＋</span><span>Revenu</span>',"btn btn-green",()=>openDrawer("income"));
+    const bb=btn('<span style="font-size:1.2rem">－</span><span>Dépense</span>',"btn btn-orange",()=>openDrawer("expense"));
+    const bc=btn('<span style="font-size:1.2rem">🔄</span><span>Récurrent</span>',"btn btn-ghost",()=>openDrawer("recurring"));
+    [ba,bb,bc].forEach(b=>{ b.style.cssText="padding:.85rem .3rem;flex-direction:column;gap:.22rem;border-radius:14px;width:100%;font-size:.78rem;"; });
+    g3.appendChild(ba); g3.appendChild(bb); g3.appendChild(bc); c.appendChild(g3);
+
+    // Récurrents configurés (avec ✏️ et ✕)
+    const makeRecRow=(r,isInc)=>{
+      const cat=cats2.find(ct=>ct.id===r.catId);
+      const row=div("tx");
+      const ico=span(isInc?typeIcon(r.type):(cat&&cat.icon)||"💸"); ico.style.fontSize="1.2rem";
+      const info=el("div"); info.style.cssText="flex:1;min-width:0;";
+      const nm=el("div"); nm.style.cssText="font-size:.86rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"; nm.textContent=r.label||r.type;
+      const freqTxt=`🔄 Mensuel · le ${r.dayOfMonth}`;
+      const finTxt=r.dateFin?` · fin ${r.dateFin}`:"";
+      const dt=el("div"); dt.style.cssText="font-size:.71rem;color:#f48c06;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"; dt.textContent=freqTxt+finTxt+(cat&&!isInc?" · "+cat.label:"");
+      info.appendChild(nm); info.appendChild(dt);
+      const right=el("div"); right.style.cssText="display:flex;align-items:center;gap:.5rem;flex-shrink:0;";
+      const amt=span((isInc?"+":"-")+fmt(r.amount)); amt.style.cssText=`color:${isInc?"#10b981":"#f87171"};font-weight:700;`;
+      const editBtn=el("button","btn-danger"); editBtn.textContent="✏️"; editBtn.style.cssText="background:rgba(59,130,246,.12);color:#60a5fa;border-color:rgba(59,130,246,.2);";
+      const rid=r.id; editBtn.addEventListener("click",()=>openDrawer("editrecurring:"+rid));
+      const del=el("button","btn-danger"); del.textContent="✕";
+      del.addEventListener("click",()=>{ confirmAction("Supprimer ce récurrent ?\n(Les transactions déjà générées de ce récurrent seront aussi supprimées)",()=>{ state.recurring=state.recurring.filter(x=>x.id!==rid); if(isInc) state.incomes=state.incomes.filter(x=>x.fromRecurring!==rid); else state.expenses=state.expenses.filter(x=>x.fromRecurring!==rid); saveState(); render(); notify("Récurrent supprimé"); }); });
+      right.appendChild(amt); right.appendChild(editBtn); right.appendChild(del);
+      row.appendChild(ico); row.appendChild(info); row.appendChild(right);
+      return row;
+    };
+    const recInc=state.recurring.filter(r=>r.kind!=="expense");
+    const recExp=state.recurring.filter(r=>r.kind==="expense");
+    if(recInc.length){ const rl=div("sec"); rl.textContent=`Revenus récurrents (${recInc.length})`; c.appendChild(rl); const rc=div("card",{padding:"0 1.1rem"}); recInc.forEach(r=>rc.appendChild(makeRecRow(r,true))); c.appendChild(rc); }
+    if(recExp.length){ const rl=div("sec"); rl.textContent=`Dépenses récurrentes (${recExp.length})`; c.appendChild(rl); const rc=div("card",{padding:"0 1.1rem"}); recExp.forEach(r=>rc.appendChild(makeRecRow(r,false))); c.appendChild(rc); }
+  } else {
+    // Mois précédent : afficher les récurrents en lecture seule
+    const recDisp=state.recurring.filter(r=>{
+      if(r.dateFin&&monthStr>r.dateFin) return false;
+      return true;
+    });
+    const recIncD=recDisp.filter(r=>r.kind!=="expense");
+    const recExpD=recDisp.filter(r=>r.kind==="expense");
+    const makeRecRowRO=(r,isInc)=>{
+      const cat=cats2.find(ct=>ct.id===r.catId);
+      const day=Math.min(r.dayOfMonth||1,new Date(year,month+1,0).getDate());
+      const row=div("tx"); row.style.opacity=".6";
+      const ico=span(isInc?typeIcon(r.type):(cat&&cat.icon)||"💸"); ico.style.fontSize="1.2rem";
+      const info=el("div"); info.style.cssText="flex:1;min-width:0;";
+      const nm=el("div"); nm.style.cssText="font-size:.86rem;font-weight:600;"; nm.textContent=(r.label||r.type)+" 🔄";
+      const dt=el("div"); dt.style.cssText="font-size:.71rem;color:#505070;"; dt.textContent=`le ${day}`+(cat&&!isInc?" · "+cat.label:"");
+      info.appendChild(nm); info.appendChild(dt);
+      const amt=span((isInc?"+":"-")+fmt(r.amount)); amt.style.cssText=`color:${isInc?"#10b981":"#f87171"};font-weight:700;flex-shrink:0;`;
+      row.appendChild(ico); row.appendChild(info); row.appendChild(amt);
+      return row;
+    };
+    if(recIncD.length){ const rl=div("sec"); rl.textContent=`Revenus récurrents (${recIncD.length})`; c.appendChild(rl); const rc=div("card",{padding:"0 1.1rem"}); recIncD.forEach(r=>rc.appendChild(makeRecRowRO(r,true))); c.appendChild(rc); }
+    if(recExpD.length){ const rl=div("sec"); rl.textContent=`Dépenses récurrentes (${recExpD.length})`; c.appendChild(rl); const rc=div("card",{padding:"0 1.1rem"}); recExpD.forEach(r=>rc.appendChild(makeRecRowRO(r,false))); c.appendChild(rc); }
+  }
+
+  // Helper ligne transaction
+  const makeRow=(x,isInc)=>{
+    const past=isPast(x.date);
+    const cat=cats2.find(ct=>ct.id===x.catId);
+    const row=div("tx"); if(!past) row.style.opacity=".5";
+    const ico=span(isInc?typeIcon(x.type):(cat&&cat.icon)||"💸"); ico.style.fontSize="1.2rem";
+    const info=el("div"); info.style.cssText="flex:1;min-width:0;";
+    const nm=el("div"); nm.style.cssText="font-size:.86rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"; nm.textContent=isInc?x.note||x.type:x.label||(cat&&cat.label)||"Dépense";
+    const dt=el("div"); dt.style.cssText="font-size:.71rem;color:#505070;"; dt.textContent=(past?"":"🕐 ")+fmtD(x.date)+(cat&&!isInc?" · "+cat.label:"");
+    info.appendChild(nm); info.appendChild(dt);
+    const right=el("div"); right.style.cssText="display:flex;align-items:center;gap:.5rem;flex-shrink:0;";
+    const amt=span((isInc?"+":"-")+fmt(x.amount)); amt.style.cssText=`color:${isInc?"#10b981":"#f87171"};font-weight:700;`;
+    const xid=x.id;
+    const editBtn=el("button","btn-danger"); editBtn.textContent="✏️"; editBtn.style.cssText="background:rgba(59,130,246,.12);color:#60a5fa;border-color:rgba(59,130,246,.2);";
+    editBtn.addEventListener("click",()=>openDrawer((isInc?"editincome:":"editexpense:")+xid));
+    const del=el("button","btn-danger"); del.textContent="✕";
+    del.addEventListener("click",()=>{ confirmAction("Supprimer cette transaction ?",()=>{ if(isInc) state.incomes=state.incomes.filter(i=>i.id!==xid); else state.expenses=state.expenses.filter(e=>e.id!==xid); saveState(); render(); notify("Supprimé"); }); });
+    right.appendChild(amt); right.appendChild(editBtn); right.appendChild(del);
+    row.appendChild(ico); row.appendChild(info); row.appendChild(right);
+    return row;
+  };
+
+  // Revenus du mois
+  const manInc=state.incomes.filter(x=>x.date.startsWith(monthStr));
+  const lbl=div("sec"); lbl.textContent=`Revenus (${manInc.length})`; c.appendChild(lbl);
+  if(!manInc.length){ const ei=div("card",{padding:"1.2rem",textAlign:"center",color:"#505070",fontSize:".85rem"}); ei.textContent="Aucun revenu ce mois"; c.appendChild(ei); }
+  else { const ic=div("card",{padding:"0 1.1rem"}); manInc.sort((a,b)=>new Date(b.date)-new Date(a.date)).forEach(x=>ic.appendChild(makeRow(x,true))); c.appendChild(ic); }
+
+  // Dépenses du mois
+  const exps=state.expenses.filter(e=>e.catId!=="dettes"&&e.date.startsWith(monthStr));
+  const el2=div("sec"); el2.textContent=`Dépenses (${exps.length})`; c.appendChild(el2);
+  if(!exps.length){ const ee=div("card",{padding:"1.2rem",textAlign:"center",color:"#505070",fontSize:".85rem"}); ee.textContent="Aucune dépense ce mois"; c.appendChild(ee); }
+  else { const ec=div("card",{padding:"0 1.1rem"}); exps.sort((a,b)=>new Date(b.date)-new Date(a.date)).forEach(x=>ec.appendChild(makeRow(x,false))); c.appendChild(ec); }
+}
+
+/* ════════════════════════════════════
+   PAGE : PLAFOND
+════════════════════════════════════ */
+function renderPlafond(c){
+  c.innerHTML="";
+  const now=new Date();
+  const m=now.toISOString().slice(0,7);
+  const plafond=state.enveloppeCB||0;
+
+  // ── Section 1 : Virements CB → Revolut ──
+  const virements=state.revolut_virements||[];
+  const virementsMonth=virements.filter(v=>v.date.startsWith(m));
+  const totalVirements=virementsMonth.reduce((s,v)=>s+(v.amount||0),0);
+  const totalRevolut=state.incomes.filter(x=>x.cbRevolut).reduce((a,x)=>a+(x.amount||0),0); const totalAchats=state.expenses.filter(x=>x.cbDiff&&!x.cbCredit).reduce((a,x)=>a+(x.amount||0),0)-totalRevolut;
+  const resteVirements=Math.max(0,totalVirements-totalAchats);
+  // Barre = virements virés / plafond cible (si plafond défini)
+  const plafondV=state.enveloppeCB||0;
+  const pctV=plafondV>0?Math.min(100,(totalVirements/plafondV)*100):0;
+
+  const vCard=div("card",{padding:"1.2rem"});
+
+  // Titre + plafond modifiable
+  const vTop=div("",{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:".8rem"});
+  const vL=el("div");
+  const vNum=el("div"); vNum.style.cssText=`font-family:'Syne',sans-serif;font-size:2rem;font-weight:900;color:${resteVirements===0?"#f87171":"#f48c06"};`; vNum.textContent=fmt(resteVirements);
+  const vSub=el("div"); vSub.style.cssText="font-size:.75rem;color:#505070;margin-top:.3rem;";
+  vSub.textContent=totalVirements>0?`Viré ${fmt(totalVirements)}${plafondV>0?" / "+fmt(plafondV):""} · Dépensé ${fmt(totalAchats)}`:"Aucun virement ce mois";
+  vL.appendChild(vNum); vL.appendChild(vSub);
+
+  const vEdit=el("div"); vEdit.style.cssText="display:flex;flex-direction:column;align-items:flex-end;gap:.4rem;flex-shrink:0;";
+  const vInp=mkInp("number","0",String(plafond)); vInp.style.cssText="width:90px;font-size:.9rem;text-align:right;padding:.4rem .6rem;";
+  const vBtn=btn("Plafond","btn btn-orange",()=>{
+    const v=parseFloat(vInp.value); if(isNaN(v)||v<0) return;
+    state.enveloppeCB=v; saveState(); renderPlafond(c); notify("Plafond mis à jour ✅");
+  }); vBtn.style.cssText="padding:.4rem .7rem;font-size:.78rem;";
+  vEdit.appendChild(vInp); vEdit.appendChild(vBtn);
+  vTop.appendChild(vL); vTop.appendChild(vEdit);
+  vCard.appendChild(vTop);
+
+  // Barre de progression : virements / plafond (si plafond défini)
+  if(plafondV>0){
+    const track=div("ptrack"); const fill=div("pfill");
+    fill.style.cssText=`width:${pctV}%;background:${pctV>=100?"linear-gradient(90deg,#ef4444,#f87171)":pctV>=80?"linear-gradient(90deg,#d97706,#facc15)":"linear-gradient(90deg,#e85d04,#f48c06)"};`;
+    track.appendChild(fill); vCard.appendChild(track);
+  }
+
+  // Bouton ajouter virement
+  const addVBtn=btn("+ Ajouter un virement","btn btn-orange",()=>openDrawer("addvirement"));
+  addVBtn.style.cssText="width:100%;margin-top:.8rem;";
+  vCard.appendChild(addVBtn);
+
+  // Boutons Réconcilier + Arrondis RevPoints
+  const utilRow=div("",{display:"grid",gridTemplateColumns:"1fr 1fr",gap:".5rem",marginTop:".5rem"});
+  const reconcileBtn=btn("🔧 Réconcilier","btn btn-ghost",()=>openDrawer("reconcile"));
+  reconcileBtn.style.cssText="font-size:.78rem;padding:.6rem .4rem;";
+  const arrondisBtn=btn("🪙 Arrondis","btn btn-ghost",()=>openDrawer("arrondis"));
+  arrondisBtn.style.cssText="font-size:.78rem;padding:.6rem .4rem;";
+  utilRow.appendChild(reconcileBtn); utilRow.appendChild(arrondisBtn);
+  vCard.appendChild(utilRow);
+
+  // Liste virements du mois
+  if(virementsMonth.length){
+    const vList=div("",{marginTop:".8rem",borderTop:"1px solid rgba(255,255,255,.06)",paddingTop:".8rem"});
+    const vListLbl=div("sec",{marginBottom:".4rem"}); vListLbl.textContent="Ce mois";
+    vList.appendChild(vListLbl);
+    [...virementsMonth].sort((a,b)=>new Date(b.date)-new Date(a.date)).forEach(v=>{
+      const row=div("tx");
+      const ico=span("💸"); ico.style.fontSize="1.1rem";
+      const info=el("div"); info.style.cssText="flex:1;min-width:0;";
+      const nm=el("div"); nm.style.cssText="font-size:.86rem;font-weight:600;"; nm.textContent=v.note||"Virement Revolut";
+      const dt=el("div"); dt.style.cssText="font-size:.71rem;color:#505070;"; dt.textContent=fmtD(v.date);
+      info.appendChild(nm); info.appendChild(dt);
+      const right=el("div"); right.style.cssText="display:flex;align-items:center;gap:.5rem;flex-shrink:0;";
+      const amt=span(fmt(v.amount)); amt.style.cssText="color:#f48c06;font-weight:700;";
+      const del=el("button","btn-danger"); del.textContent="✕"; const vid=v.id;
+      del.addEventListener("click",()=>{ confirmAction("Supprimer ce virement ?",()=>{ state.revolut_virements=state.revolut_virements.filter(x=>x.id!==vid); saveState(); renderPlafond(c); notify("Supprimé"); }); });
+      right.appendChild(amt); right.appendChild(del);
+      row.appendChild(ico); row.appendChild(info); row.appendChild(right);
+      vList.appendChild(row);
+    });
+    vCard.appendChild(vList);
+  }
+  c.appendChild(vCard);
+
+  // ── Section 2 : Historique tous les mois ──
+  const allMonths=[...new Set(virements.map(v=>v.date.slice(0,7)))].sort().reverse();
+  if(allMonths.length>1||(allMonths.length===1&&allMonths[0]!==m)){
+    const histCard=div("card",{padding:"1.1rem 1.2rem",marginTop:".5rem"});
+    const histLbl=div("sec",{marginBottom:".6rem"}); histLbl.textContent="Historique";
+    histCard.appendChild(histLbl);
+    allMonths.filter(mo=>mo!==m).forEach(mo=>{
+      const moVirs=virements.filter(v=>v.date.startsWith(mo));
+      const moTotal=moVirs.reduce((s,v)=>s+(v.amount||0),0);
+      const moDate=new Date(mo+"-01");
+      const moLbl=moDate.toLocaleDateString("fr-FR",{month:"long",year:"numeric"});
+      const row=div("",{display:"flex",justifyContent:"space-between",padding:".5rem 0",borderBottom:"1px solid rgba(255,255,255,.04)"});
+      const lbl=span(moLbl); lbl.style.cssText="font-size:.85rem;color:#8080a0;";
+      const amt=span(fmt(moTotal)); amt.style.cssText="font-weight:700;color:#f48c06;";
+      row.appendChild(lbl); row.appendChild(amt);
+      histCard.appendChild(row);
+    });
+    c.appendChild(histCard);
+  }
+
+  // ── Section 3 : Achats CB différée (suivi Revolut) ──
+  const cbExps=state.expenses.filter(x=>x.cbDiff&&!x.cbCredit);
+  const cbCredits=state.incomes.filter(x=>x.cbRevolut);
+  const cbRevolutTotal=state.incomes.filter(x=>x.cbRevolut).reduce((a,x)=>a+(x.amount||0),0);
+  const depuisBascule=cbExps.reduce((a,x)=>a+(x.amount||0),0)-cbRevolutTotal;
+  if(depuisBascule>0){
+    const cbCard=div("card",{padding:"1.1rem 1.2rem",marginTop:".5rem"});
+    const cbLbl=div("sec",{marginBottom:".4rem"}); cbLbl.textContent="Achats sur compte Revolut";
+    cbCard.appendChild(cbLbl);
+    const cbNum=el("div"); cbNum.style.cssText=`font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:800;color:#e8e0f8;margin-bottom:.6rem;`;
+    cbNum.textContent=fmt(depuisBascule);
+    cbCard.appendChild(cbNum);
+    // Liste détaillée
+    const allCbRows=[
+      ...cbExps.map(x=>({date:x.date,label:x.label||"Achat",amount:x.amount,credit:false})),
+      ...state.incomes.filter(x=>x.cbRevolut).map(x=>({date:x.date,label:"↩️ "+x.note,amount:x.amount,credit:true}))
+    ].sort((a,b)=>new Date(b.date)-new Date(a.date));
+    allCbRows.forEach(x=>{
+      const row=div("tx");
+      const ico=span(x.credit?"💳":"🛒"); ico.style.fontSize="1rem";
+      const info=el("div"); info.style.cssText="flex:1;min-width:0;";
+      const nm=el("div"); nm.style.cssText="font-size:.86rem;font-weight:600;"; nm.textContent=x.label;
+      const dt=el("div"); dt.style.cssText="font-size:.71rem;color:#505070;"; dt.textContent=fmtD(x.date);
+      info.appendChild(nm); info.appendChild(dt);
+      const amt=span((x.credit?"+":"")+fmt(x.amount)); amt.style.cssText=`color:${x.credit?"#10b981":"#f48c06"};font-weight:700;font-size:.9rem;flex-shrink:0;`;
+      row.appendChild(ico); row.appendChild(info); row.appendChild(amt);
+      cbCard.appendChild(row);
+    });
+    c.appendChild(cbCard);
+  }
+}
+
+/* ════════════════════════════════════
+   PAGE : DETTES
+════════════════════════════════════ */
+function renderDebts(c){
+  c.innerHTML="";
+  const addBtn=btn("+ Ajouter une dette","btn btn-orange",()=>openDrawer("debt")); addBtn.style.width="100%"; c.appendChild(addBtn);
+  if(!state.debts.length){ const e=div("card",{padding:"2.5rem",textAlign:"center"}); e.innerHTML='<div style="font-size:3rem;margin-bottom:1rem;">🔓</div><div style="font-family:\'Syne\',sans-serif;font-size:1.1rem;font-weight:800;">Aucune dette</div><div style="color:#505070;font-size:.85rem;margin-top:.4rem;">Ajoute tes dettes pour suivre ta progression</div>'; c.appendChild(e); return; }
+  state.debts.forEach(d=>{
+    const p=d.total>0?Math.min(100,((d.total-d.remaining)/d.total)*100):0,done=d.remaining===0;
+    const card=div("card",{padding:"1.2rem",border:done?"1px solid rgba(16,185,129,.2)":"1px solid rgba(255,255,255,.06)"});
+    const hdr=el("div"); hdr.style.cssText="display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;";
+    const ico=span(d.icon); ico.style.fontSize="1.8rem";
+    const info=el("div"); info.style.cssText="flex:1;min-width:0;"; const nm=el("div"); nm.style.cssText="font-weight:700;font-size:1rem;"; nm.textContent=d.name; info.appendChild(nm);
+    if(d.note){ const nt=el("div"); nt.style.cssText="font-size:.73rem;color:#505070;"; nt.textContent=d.note; info.appendChild(nt); }
+    hdr.appendChild(ico); hdr.appendChild(info);
+    if(done){ const tg=span("Soldée ✓"); tg.style.cssText="background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.2);padding:.2rem .6rem;border-radius:99px;font-size:.72rem;font-weight:700;flex-shrink:0;"; hdr.appendChild(tg); }
+    const del=el("button","btn-danger"); del.textContent="✕"; const did=d.id; del.addEventListener("click",()=>{ confirmAction("Supprimer cette dette ?",()=>{ state.debts=state.debts.filter(x=>x.id!==did); saveState(); render(); notify("Supprimé"); }); }); hdr.appendChild(del); card.appendChild(hdr);
+    const g2=div("grid2"); const sb1=makeStatBox("Restant",fmt(d.remaining),done?"#10b981":"#e8e0f8",true); sb1.querySelector(".sec").style.color="#f48c06"; const sb2=makeStatBox("Remboursé",fmt(d.total-d.remaining),null,true); sb2.querySelector(".sec").style.color="#10b981"; g2.appendChild(sb1); g2.appendChild(sb2); card.appendChild(g2);
+    const pg=makeProgress(p,done?"linear-gradient(90deg,#059669,#10b981)":"linear-gradient(90deg,#e85d04,#f48c06)"); pg.style.marginTop="1rem"; pg.style.marginBottom=".4rem"; card.appendChild(pg);
+    const inf2=el("div"); inf2.style.cssText="display:flex;justify-content:space-between;font-size:.72rem;color:#505070;"; inf2.innerHTML=`<span>${p.toFixed(0)}% remboursé</span><span>${fmt(d.total)} initial</span>`; card.appendChild(inf2);
+    if(!done){ const pb=btn("💸 Rembourser","btn btn-orange"); pb.style.cssText="width:100%;padding:.75rem;margin-top:1rem;"; const dpid=d.id; pb.addEventListener("click",()=>openDrawer("pay:"+dpid)); card.appendChild(pb); }
+    if((d.payments||[]).length){
+      const hist=el("div"); hist.style.cssText="margin-top:1rem;border-top:1px solid rgba(255,255,255,.05);padding-top:.8rem;"; const hl=div("sec"); hl.textContent="Historique"; hist.appendChild(hl);
+      [...d.payments].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5).forEach(p2=>{ const hr=el("div","debt-hist-row"); const hn=span(p2.note||"Remboursement"); hn.style.cssText="color:#8080a0;flex:1;"; const ha=span("-"+fmt(p2.amount)); ha.style.cssText="color:#10b981;font-weight:700;margin-right:.8rem;"; const hd=span(fmtD(p2.date)); hd.style.color="#505070"; hr.appendChild(hn); hr.appendChild(ha); hr.appendChild(hd); hist.appendChild(hr); });
+      card.appendChild(hist);
+    }
+    c.appendChild(card);
+  });
+}
+
+/* ════════════════════════════════════
+   PAGE : TRÉSORERIE (projection jour par jour)
+════════════════════════════════════ */
+let tresoHorizon = 30;
+let tresoAvecVini = false;
+let fluxMonthOffset = 0; // 0 = mois actuel, -1 = mois précédent, etc.
+
+function getFluxMonth(){
+  const d=new Date(); d.setMonth(d.getMonth()+fluxMonthOffset);
+  return {year:d.getFullYear(), month:d.getMonth()}; // month 0-11
+}
+function fluxMonthLabel(){
+  const {year,month}=getFluxMonth();
+  return new Date(year,month,1).toLocaleDateString("fr-FR",{month:"long",year:"numeric"});
+}
+
+
+function buildTresoEvents(days, avecVini=false){
+  const events = [];
+  const today2 = new Date(); today2.setHours(0,0,0,0);
+
+  state.incomes.forEach(x=>{
+    if(x.fromRecurring||x.cbRevolut) return; // géré par récurrents, et cbRevolut hors compte principal
+    const d=new Date(x.date+"T00:00:00"); 
+    if(d>today2) events.push({date:x.date,label:x.note||x.type,amount:x.amount,kind:"in",auto:false});
+  });
+  state.expenses.forEach(x=>{
+    if(x.cbDiff||x.fromRecurring) return; // cbDiff hors calcul, récurrents gérés séparément
+    const d=new Date(x.date+"T00:00:00");
+    if(d>today2) events.push({date:x.date,label:x.label||"Dépense",amount:-x.amount,kind:"out",auto:false});
+  });
+
+  // Bascules CB futures basées sur les virements Revolut du cycle en cours
+  // Hypothèse : prélèvement le dernier jour du mois suivant chaque cycle "20→20"
+  // Le cycle en cours = depuis le 20 du mois en cours (ou le 20 du mois précédent si on est avant le 20)
+  {
+    const todayDay=today2.getDate();
+    const startCycle=new Date(today2);
+    if(todayDay>=20){ startCycle.setDate(20); startCycle.setHours(0,0,0,0); }
+    else { startCycle.setMonth(today2.getMonth()-1); startCycle.setDate(20); startCycle.setHours(0,0,0,0); }
+    const startCycleStr=startCycle.toISOString().slice(0,10);
+    const baseVirements=(state.revolut_virements||[])
+      .filter(v=>v.date>=startCycleStr)
+      .reduce((s,v)=>s+(v.amount||0),0);
+    if(baseVirements>0){
+      // On projette ce montant comme prélèvement le dernier jour de chaque mois suivant
+      // pour les cycles à venir dans la fenêtre `days`
+      // Le 1er prélèvement futur = dernier jour du mois courant si on est avant la fin du cycle (avant le 20 prochain)
+      // Logique simplifiée : on injecte au dernier jour du mois suivant le 20 de fin de cycle
+      const dayMs=86400000;
+      for(let i=1;i<=days;i++){
+        const d=new Date(today2.getTime()+i*dayMs);
+        // Dernier jour du mois ?
+        const tomorrow=new Date(d.getTime()+dayMs);
+        if(tomorrow.getMonth()!==d.getMonth()){
+          // d est le dernier jour de son mois
+          // On y injecte la bascule, mais seulement si elle correspond à un cycle après le cycle en cours
+          // Cycle en cours se termine le 20 du mois courant ou prochain
+          const endCycle=new Date(startCycle); endCycle.setMonth(endCycle.getMonth()+1);
+          if(d>=endCycle){
+            events.push({date:d.toISOString().slice(0,10),label:"Bascule CB (estim.)",amount:-baseVirements,kind:"out",auto:true,bascule:true});
+          }
+        }
+      }
+    }
+  }
+
+  if(avecVini){
+    const vini=state.debts.find(d=>d.name==="Vini");
+    if(vini&&vini.remaining>0){
+      let rem=vini.remaining;
+      for(let i=1;i<=days&&rem>0;i++){
+        const d=new Date(today2); d.setDate(today2.getDate()+i);
+        if(d.getDate()===15){
+          const v=Math.min(1000,rem);
+          events.push({date:d.toISOString().slice(0,10),label:"Vini (estimé)",amount:v,kind:"in",auto:true,vini:true});
+          rem-=v;
+        }
+      }
+    }
+  }
+
+  state.recurring.forEach(r=>{
+    for(let i=1;i<=days;i++){
+      const d=new Date(today2); d.setDate(today2.getDate()+i);
+      const mm=d.toISOString().slice(0,7);
+      if(r.dateFin && mm > r.dateFin) continue;
+      let shouldFire=false;
+      if(r.frequency==="monthly"&&d.getDate()===(r.dayOfMonth||1)) shouldFire=true;
+      if(r.frequency==="weekly"&&d.getDay()===1) shouldFire=true;
+      if(shouldFire) events.push({date:d.toISOString().slice(0,10),label:r.label+(r.dateFin&&mm===r.dateFin?" (dernier)":""),amount:r.kind==="expense"?-r.amount:r.amount,kind:r.kind==="expense"?"out":"in",auto:true});
+    }
+  });
+
+  events.sort((a,b)=>new Date(a.date)-new Date(b.date));
+  return events;
+}
+
+function renderProjection(c){
+  c.innerHTML="";
+
+  const tabRow=div("",{display:"flex",gap:".5rem",marginBottom:".8rem"});
+  [30,60,90].forEach(h=>{
+    const tb=btn(h+" j","btn "+(tresoHorizon===h?"btn-orange":"btn-ghost"),()=>{ tresoHorizon=h; renderProjection(c); });
+    tb.style.cssText="flex:1;padding:.55rem;font-size:.82rem;"; tabRow.appendChild(tb);
+  });
+  c.appendChild(tabRow);
+
+  const viniRow=div("",{display:"flex",alignItems:"center",gap:".7rem",marginBottom:"1rem",padding:".7rem 1rem",background:"rgba(255,255,255,.03)",borderRadius:"12px",border:"1px solid rgba(255,255,255,.06)"});
+  const viniToggle=el("input"); viniToggle.type="checkbox"; viniToggle.checked=tresoAvecVini;
+  viniToggle.style.cssText="width:18px;height:18px;accent-color:#10b981;cursor:pointer;flex-shrink:0;";
+  viniToggle.addEventListener("change",()=>{ tresoAvecVini=viniToggle.checked; renderProjection(c); });
+  const viniLbl=el("div"); viniLbl.innerHTML='<div style="font-size:.86rem;font-weight:600;">Inclure remboursements Vini</div><div style="font-size:.72rem;color:#505070;">Scénario optimiste — 1 000 € estimés le 15 de chaque mois</div>';
+  viniRow.appendChild(viniToggle); viniRow.appendChild(viniLbl); c.appendChild(viniRow);
+
+  const dateRef2=state.soldeDateRef||today();
+  const todayStr=today();
+  const totalIncApres2=state.incomes.filter(x=>x.date>dateRef2&&x.date<=todayStr&&!x.cbRevolut).reduce((a,x)=>a+(x.amount||0),0);
+  const totalExpApres2=state.expenses.filter(x=>x.date>dateRef2&&x.date<=todayStr&&!x.cbDiff).reduce((a,x)=>a+(x.amount||0),0);
+  const soldeAujourdhui=(state.soldeDepart||0)-(state.differeEnAttente||0)+totalIncApres2-totalExpApres2;
+  const today2=new Date(); today2.setHours(0,0,0,0);
+  const events=buildTresoEvents(tresoHorizon,tresoAvecVini);
+  const futureEvents=events.filter(ev=>new Date(ev.date)>today2);
+
+  let runBalPreview=soldeAujourdhui;
+  futureEvents.forEach(ev=>{runBalPreview+=ev.amount;});
+  const finalDate=new Date(today2); finalDate.setDate(today2.getDate()+tresoHorizon);
+  const finalCard=div("card",{padding:"1rem 1.2rem",marginBottom:".8rem",background:runBalPreview>=0?"rgba(16,185,129,.06)":"rgba(239,68,68,.06)",border:runBalPreview>=0?"1px solid rgba(16,185,129,.2)":"1px solid rgba(239,68,68,.2)"});
+  finalCard.innerHTML=`<div class="sec" style="margin-bottom:.2rem;">Solde dans ${tresoHorizon} jours · ${finalDate.toLocaleDateString("fr-FR",{day:"2-digit",month:"long"})}</div><div style="font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:900;color:${runBalPreview>=0?"#10b981":"#f87171"};">${fmt(runBalPreview)}</div><div style="font-size:.72rem;color:#505070;margin-top:.3rem;">${tresoAvecVini?"Vini inclus (estimatif)":"Sans remboursements Vini"}</div>`;
+  c.appendChild(finalCard);
+
+  if(!futureEvents.length){const empty=div("card",{padding:"1.2rem",textAlign:"center",color:"#505070",fontSize:".85rem"});empty.textContent="Aucun événement prévu.";c.appendChild(empty);return;}
+
+  const tableWrap=div("card",{padding:"0",overflowX:"hidden"});
+  const table=el("table"); table.style.cssText="width:100%;border-collapse:collapse;font-size:.82rem;";
+  const thead=el("thead"); const trh=el("tr"); trh.style.cssText="background:#1a1a2e;";
+  ["Date","Événement","Montant","Solde"].forEach((h,i)=>{const th=el("th");th.textContent=h;th.style.cssText=`padding:.6rem .8rem;color:#8080a0;font-weight:600;text-transform:uppercase;font-size:.65rem;letter-spacing:.06em;text-align:${i>=2?"right":"left"};border-bottom:1px solid rgba(255,255,255,.08);`;trh.appendChild(th);});
+  thead.appendChild(trh); table.appendChild(thead);
+  const tbody=el("tbody"); let runBal=soldeAujourdhui;
+  futureEvents.forEach((ev,idx)=>{
+    runBal+=ev.amount;
+    const tr=el("tr"); tr.style.cssText=`border-bottom:1px solid rgba(255,255,255,.04);background:${ev.vini?"rgba(16,185,129,.04)":ev.bascule?"rgba(244,140,6,.05)":idx%2===1?"rgba(255,255,255,.02)":"transparent"};`;
+    const d=new Date(ev.date);
+    const tdDate=el("td"); tdDate.style.cssText="padding:.55rem .8rem;color:#8080a0;font-size:.75rem;white-space:nowrap;"; tdDate.textContent=d.toLocaleDateString("fr-FR",{day:"2-digit",month:"short"});
+    const tdLabel=el("td"); tdLabel.style.cssText=`padding:.55rem .4rem;font-weight:600;color:${ev.vini?"#6ee7b7":ev.bascule?"#fbbf24":"#e8e0f8"};font-style:${ev.bascule?"italic":"normal"};`; tdLabel.textContent=ev.label.replace(" 🔄","");
+    const tdAmt=el("td"); tdAmt.style.cssText=`padding:.55rem .4rem;font-weight:700;text-align:right;white-space:nowrap;color:${ev.amount>=0?"#10b981":"#f87171"};`; tdAmt.textContent=(ev.amount>=0?"+":"")+fmt(Math.abs(ev.amount));
+    const tdSolde=el("td"); tdSolde.style.cssText=`padding:.55rem .8rem;font-weight:700;text-align:right;white-space:nowrap;color:${runBal>=0?"#e8e0f8":"#f87171"};`; tdSolde.textContent=fmt(runBal);
+    tr.appendChild(tdDate);tr.appendChild(tdLabel);tr.appendChild(tdAmt);tr.appendChild(tdSolde);tbody.appendChild(tr);
+  });
+  table.appendChild(tbody); tableWrap.appendChild(table); c.appendChild(tableWrap);
+}
+/* ════════════════════════════════════
+   PAGE : RÉGLAGES (catégories + déconnexion)
+════════════════════════════════════ */
+function renderSettings(c){
+  c.innerHTML="";
+  const cats=getCats();
+  if(!state.incomeTypes||!state.incomeTypes.length) state.incomeTypes=[...DEFAULT_INCOME_TYPES];
+
+  // Solde de référence
+  const sdCard=div("card",{padding:"1.1rem 1.2rem",marginBottom:".5rem"});
+  sdCard.innerHTML='<div style="font-family:\'Syne\',sans-serif;font-size:1rem;font-weight:800;margin-bottom:.3rem;">💰 Solde de référence</div><div style="font-size:.75rem;color:#505070;margin-bottom:.8rem;">Solde réel + différé en attente à une date donnée (ex : −3 160 € au 20 avril)</div>';
+  const sdRow=div("",{display:"flex",gap:".6rem",alignItems:"center",flexWrap:"wrap"});
+  const sdInp=mkInp("number","0",String(state.soldeDepart||0)); sdInp.style.flex="1"; sdInp.style.minWidth="100px";
+  const sdDate=mkInp("date","",state.soldeDateRef||today()); sdDate.style.flex="1"; sdDate.style.minWidth="120px";
+  const sdBtn=btn("OK","btn btn-orange",()=>{
+    const v=parseFloat(sdInp.value); if(isNaN(v)) return;
+    state.soldeDepart=v; state.soldeDateRef=sdDate.value||today();
+    saveState(); render(); notify("Solde mis à jour ✅");
+  }); sdBtn.style.flexShrink="0";
+  sdRow.appendChild(sdInp); sdRow.appendChild(sdDate); sdRow.appendChild(sdBtn); sdCard.appendChild(sdRow);
+
+  // Bouton Réconcilier compte principal
+  const recRow=div("",{marginTop:".7rem",borderTop:"1px solid rgba(255,255,255,.06)",paddingTop:".7rem"});
+  const recBtn=btn("🔧 Réconcilier à aujourd'hui","btn btn-ghost",()=>openDrawer("reconcileMain"));
+  recBtn.style.cssText="width:100%;font-size:.82rem;";
+  const recHelp=el("div"); recHelp.style.cssText="font-size:.72rem;color:#505070;margin-top:.4rem;line-height:1.5;";
+  recHelp.textContent="Recale le solde de référence à la date du jour à partir de ton vrai solde bancaire. L'historique des transactions est conservé.";
+  recRow.appendChild(recBtn); recRow.appendChild(recHelp);
+  sdCard.appendChild(recRow);
+  c.appendChild(sdCard);
+
+  // Différé en attente
+  const diffCard=div("card",{padding:"1.1rem 1.2rem",marginBottom:".5rem"});
+  diffCard.innerHTML='<div style="font-family:\'Syne\',sans-serif;font-size:1rem;font-weight:800;margin-bottom:.3rem;">💳 Débit différé en attente</div><div style="font-size:.75rem;color:#505070;margin-bottom:.8rem;">Somme qui va être prélevée à la prochaine bascule CB — s\'ajoute au solde de référence pour afficher le vrai solde bancaire</div>';
+  const diffRow=div("",{display:"flex",gap:".6rem",alignItems:"center"});
+  const diffInp=mkInp("number","0",String(state.differeEnAttente||0)); diffInp.style.flex="1";
+  const diffBtn=btn("OK","btn btn-orange",()=>{
+    const v=parseFloat(diffInp.value)||0;
+    state.differeEnAttente=v;
+    saveState(); render(); notify("Différé en attente mis à jour ✅");
+  }); diffBtn.style.flexShrink="0";
+  diffRow.appendChild(diffInp); diffRow.appendChild(diffBtn); diffCard.appendChild(diffRow);
+  c.appendChild(diffCard);
+
+  // Objectif de marge mensuelle
+  const margeCard=div("card",{padding:"1.1rem 1.2rem",marginBottom:".5rem"});
+  margeCard.innerHTML='<div style="font-family:\'Syne\',sans-serif;font-size:1rem;font-weight:800;margin-bottom:.3rem;">🎯 Objectif de marge</div><div style="font-size:.75rem;color:#505070;margin-bottom:.8rem;">Cible de marge mensuelle (ex : +200€). Affichée à côté de la marge réelle sur le Board.</div>';
+  const margeRow=div("",{display:"flex",gap:".6rem",alignItems:"center"});
+  const margeInp=mkInp("number","0",String(state.margeCible||0)); margeInp.style.flex="1"; margeInp.step="any";
+  const margeBtn=btn("OK","btn btn-orange",()=>{
+    const v=parseFloat(margeInp.value)||0;
+    state.margeCible=v;
+    saveState(); render(); notify("Objectif de marge mis à jour ✅");
+  }); margeBtn.style.flexShrink="0";
+  margeRow.appendChild(margeInp); margeRow.appendChild(margeBtn); margeCard.appendChild(margeRow);
+  c.appendChild(margeCard);
+
+  // Types de revenus
+  const itTitle=div("",{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:"1rem"});
+  const itLbl=el("div"); itLbl.innerHTML='<div style="font-family:\'Syne\',sans-serif;font-size:1rem;font-weight:800;">Types de revenus</div><div style="font-size:.75rem;color:#505070;">Personnalise tes sources de revenus</div>';
+  const addItBtn=btn("+ Ajouter","btn btn-green",()=>{
+    const name=prompt("Nom du type de revenu (avec emoji) :");
+    if(name&&name.trim()){ state.incomeTypes.push(name.trim()); saveState(); render(); notify("Type ajouté ✅"); }
+  }); addItBtn.style.cssText="padding:.6rem 1rem;font-size:.8rem;";
+  itTitle.appendChild(itLbl); itTitle.appendChild(addItBtn); c.appendChild(itTitle);
+
+  const itCard=div("card",{padding:"1rem 1.2rem"});
+  state.incomeTypes.forEach((type, idx)=>{
+    const row=div("cat-edit-row");
+    const nm=el("div"); nm.style.cssText="flex:1;font-size:.9rem;font-weight:600;"; nm.textContent=type;
+    const editBtn=btn("✏️","btn btn-ghost"); editBtn.style.cssText="padding:.35rem .6rem;font-size:.8rem;";
+    editBtn.addEventListener("click",()=>{
+      const name=prompt("Modifier le type :", type);
+      if(name&&name.trim()){ state.incomeTypes[idx]=name.trim(); saveState(); render(); notify("Type modifié ✅"); }
+    });
+    const delBtn=el("button","btn-danger"); delBtn.textContent="✕"; delBtn.style.padding=".32rem .55rem";
+    if(state.incomeTypes.length>1){ delBtn.addEventListener("click",()=>{ confirmAction("Supprimer ce type de revenu ?",()=>{ state.incomeTypes.splice(idx,1); saveState(); render(); notify("Type supprimé"); }); }); }
+    else { delBtn.disabled=true; delBtn.style.opacity=".3"; }
+    row.appendChild(nm); row.appendChild(editBtn); row.appendChild(delBtn);
+    itCard.appendChild(row);
+  });
+  c.appendChild(itCard);
+
+  // Categories
+  const catTitle=div("",{display:"flex",justifyContent:"space-between",alignItems:"center"});
+  const catLbl=el("div"); catLbl.innerHTML='<div style="font-family:\'Syne\',sans-serif;font-size:1rem;font-weight:800;">Catégories</div><div style="font-size:.75rem;color:#505070;">Personnalise les noms et icônes</div>';
+  const addCatBtn=btn("+ Ajouter","btn btn-orange",()=>openDrawer("addcat")); addCatBtn.style.cssText="padding:.6rem 1rem;font-size:.8rem;";
+  catTitle.appendChild(catLbl); catTitle.appendChild(addCatBtn); c.appendChild(catTitle);
+
+  const catCard=div("card",{padding:"1rem 1.2rem"});
+  cats.forEach(cat=>{
+    const row=div("cat-edit-row");
+    const ico=span(cat.icon); ico.style.cssText="font-size:1.4rem;width:32px;text-align:center;flex-shrink:0;";
+    const nm=el("div"); nm.style.cssText="flex:1;font-size:.9rem;font-weight:600;"; nm.textContent=cat.label;
+    const editBtn=btn("✏️","btn btn-ghost"); editBtn.style.cssText="padding:.35rem .6rem;font-size:.8rem;";
+    const catId=cat.id; editBtn.addEventListener("click",()=>openDrawer("editcat:"+catId));
+    const delBtn=el("button","btn-danger"); delBtn.textContent="✕"; delBtn.style.padding=".32rem .55rem";
+    if(cats.length>2){ delBtn.addEventListener("click",()=>{ confirmAction("Supprimer cette catégorie ?",()=>{ state.cats=state.cats.filter(c2=>c2.id!==catId); saveState(); render(); notify("Catégorie supprimée"); }); }); }
+    else { delBtn.disabled=true; delBtn.style.opacity=".3"; }
+    row.appendChild(ico); row.appendChild(nm); row.appendChild(editBtn); row.appendChild(delBtn);
+    catCard.appendChild(row);
+  });
+  c.appendChild(catCard);
+
+  // Export / Import
+  const backupCard=div("card",{padding:"1.1rem 1.2rem",marginTop:".5rem"});
+  const backupTitle=el("div"); backupTitle.innerHTML='<div style="font-family:\'Syne\',sans-serif;font-size:1rem;font-weight:800;margin-bottom:.3rem;">💾 Sauvegarde</div><div style="font-size:.75rem;color:#505070;margin-bottom:.8rem;">Exporte tes données pour les sauvegarder, importe pour les restaurer.</div>';
+  backupCard.appendChild(backupTitle);
+  const backupRow=div("",{display:"flex",gap:".6rem"});
+
+  const exportBtn=btn("📤 Exporter","btn btn-green",()=>{
+    const data=JSON.stringify(state,null,2);
+    const blob=new Blob([data],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url; a.download="budget-sauvegarde.json";
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+    notify("💾 Sauvegarde téléchargée !");
+  }); exportBtn.style.flex="1";
+
+  const importBtn=btn("📥 Importer","btn btn-ghost",()=>{
+    const input=document.createElement("input"); input.type="file"; input.accept=".json";
+    input.addEventListener("change",e=>{
+      const file=e.target.files[0]; if(!file) return;
+      const reader=new FileReader();
+      reader.onload=ev=>{
+        try {
+          const imported=JSON.parse(ev.target.result);
+          if(!imported.incomes&&!imported.expenses) { notify("❌ Fichier invalide"); return; }
+          state=Object.assign({incomes:[],expenses:[],debts:[],recurring:[],cats:DEFAULT_CATS.map(c=>({...c})),incomeTypes:[...DEFAULT_INCOME_TYPES],soldeDepart:0,limiteCBDiff:0,jourBascule:20,enveloppeCB:0,revolut_virements:[]},imported);
+          if(!state.revolut_virements) state.revolut_virements=[];
+          saveState(); render(); notify("✅ Données restaurées !");
+        } catch(e){ notify("❌ Fichier invalide"); }
+      };
+      reader.readAsText(file);
+    });
+    input.click();
+  }); importBtn.style.flex="1";
+
+  backupRow.appendChild(exportBtn); backupRow.appendChild(importBtn);
+  backupCard.appendChild(backupRow);
+  c.appendChild(backupCard);
+
+  // Reset
+  const resetCard=div("card",{padding:"1.1rem 1.2rem",marginTop:".5rem"});
+  resetCard.appendChild(div("sec",{marginBottom:".8rem"})); resetCard.querySelector(".sec").textContent="Zone danger";
+  const resetBtn=btn("🗑️ Réinitialiser toutes les données","btn btn-danger",()=>{
+    if(confirm("Es-tu sûr ? Cette action est irréversible.")) {
+      const mot=prompt('Tape "SUPPRIMER" pour confirmer :');
+      if(mot==="SUPPRIMER"){
+        state={incomes:[],expenses:[],debts:[],recurring:[],cats:DEFAULT_CATS.map(c=>({...c})),incomeTypes:[...DEFAULT_INCOME_TYPES],soldeDepart:0,limiteCBDiff:0,jourBascule:20};
+        saveState(); render(); notify("Données réinitialisées");
+      } else {
+        notify("❌ Annulé — mot de confirmation incorrect");
+      }
+    }
+  }); resetBtn.style.width="100%"; resetCard.appendChild(resetBtn);
+  c.appendChild(resetCard);
+}
+
+/* ════════════════════════════════════
+   DRAWERS
+════════════════════════════════════ */
+function closeDrawer(){ document.getElementById("overlay").classList.add("hidden"); document.getElementById("drawer-content").innerHTML=""; }
+function openDrawer(type){
+  const ov=document.getElementById("overlay"),dc=document.getElementById("drawer-content");
+  dc.innerHTML=""; ov.classList.remove("hidden");
+  ov.onclick=e=>{ if(e.target===ov) closeDrawer(); };
+  const cats=getCats();
+  const mkField=(lbl,inp)=>{ const w=el("div"); const l=el("label"); l.textContent=lbl; w.appendChild(l); w.appendChild(inp); return w; };
+  const mkInp=(t,ph,val)=>{ const i=el("input"); i.type=t||"text"; if(ph) i.placeholder=ph; if(val!==undefined&&val!=="") i.value=val; return i; };
+  const mkSel=(opts,val)=>{ const s=el("select"); opts.forEach(o=>{ const opt=el("option"); if(typeof o==="object"){opt.value=o.value;opt.textContent=o.label;if(o.value===val)opt.selected=true;}else{opt.value=o;opt.textContent=o;if(o===val)opt.selected=true;} s.appendChild(opt); }); return s; };
+  const mkFooter=(okLbl,okCls,okFn)=>{ const r=div("form-row"); const cb=btn("Annuler","btn btn-ghost",closeDrawer); cb.style.flex="1"; const ob=btn(okLbl||"OK","btn "+(okCls||"btn-orange"),okFn); ob.style.flex="1"; r.appendChild(cb); r.appendChild(ob); return r; };
+
+  if(type==="income"){
+    const t=div("drawer-title"); t.textContent="Nouveau revenu"; dc.appendChild(t);
+    const f=div("form-col"); const ai=mkInp("number","0"),ts=mkSel(state.incomeTypes,state.incomeTypes[0]),ni=mkInp("text","Client X, prime…"),di=mkInp("date","",today());
+    const cbRbtRow=div("",{display:"flex",alignItems:"center",gap:".8rem",padding:".4rem 0"});
+    const cbRbt=document.createElement("input"); cbRbt.type="checkbox"; cbRbt.id="cb-rbt-check"; cbRbt.style.cssText="width:20px;height:20px;accent-color:#e85d04;cursor:pointer;flex-shrink:0;";
+    const cbRbtLabel=document.createElement("label"); cbRbtLabel.htmlFor="cb-rbt-check"; cbRbtLabel.style.cssText="font-size:.88rem;font-weight:600;cursor:pointer;color:#e8e0f8;"; cbRbtLabel.textContent="💳 sur Revolut";
+    cbRbtRow.appendChild(cbRbt); cbRbtRow.appendChild(cbRbtLabel);
+    f.appendChild(mkField("Montant (€)",ai)); f.appendChild(mkField("Type",ts)); f.appendChild(mkField("Note",ni)); f.appendChild(mkField("Date",di)); f.appendChild(cbRbtRow);
+    f.appendChild(mkFooter("Enregistrer","btn-green",()=>{ const a=parseFloat(ai.value); if(!a||a<=0) return; if(cbRbt.checked){ const lbl=ni.value||"Remboursement Revolut"; const dt=di.value||today(); state.incomes.push({id:uid(),amount:a,type:"💳 Revolut",note:lbl,date:dt,cbRevolut:true}); saveState(); render(); closeDrawer(); notify("💳 "+fmt(a)+" crédité sur Revolut"); return; } state.incomes.push({id:uid(),amount:a,type:ts.value,note:ni.value,date:di.value||today()}); saveState(); render(); closeDrawer(); notify("+"+fmt(a)+" enregistré 💰"); }));
+    ai.focus(); dc.appendChild(f);
+  }
+  else if(type==="expense"){
+    const t=div("drawer-title"); t.textContent="Nouvelle dépense"; dc.appendChild(t);
+    const f=div("form-col");
+    const ai=mkInp("number","0"),cs=mkSel(cats.map(c=>({value:c.id,label:c.icon+" "+c.label})),cats[0]?.id),li=mkInp("text","Libellé…"),di=mkInp("date","",today());
+    // Toggle CB différé
+    const cbRow=div("",{display:"flex",alignItems:"center",gap:".8rem",padding:".4rem 0"});
+    const cbCheck=el("input"); cbCheck.type="checkbox"; cbCheck.id="cb-diff-check"; cbCheck.style.cssText="width:20px;height:20px;accent-color:#e85d04;cursor:pointer;flex-shrink:0;";
+    const cbLabel=el("label"); cbLabel.htmlFor="cb-diff-check"; cbLabel.style.cssText="font-size:.88rem;font-weight:600;cursor:pointer;color:#e8e0f8;"; cbLabel.textContent="💳 Débit différé";
+    cbRow.appendChild(cbCheck); cbRow.appendChild(cbLabel);
+    f.appendChild(mkField("Montant (€)",ai)); f.appendChild(mkField("Catégorie",cs)); f.appendChild(mkField("Libellé",li)); f.appendChild(mkField("Date",di)); f.appendChild(cbRow);
+    f.appendChild(mkFooter("Enregistrer","btn-orange",()=>{
+      const a=parseFloat(ai.value); if(!a||a<=0) return;
+      state.expenses.push({id:uid(),amount:a,catId:cs.value,label:li.value,date:di.value||today(),cbDiff:cbCheck.checked});
+      saveState(); render(); closeDrawer(); notify("-"+fmt(a)+" enregistré"+(cbCheck.checked?" 💳":""));
+    }));
+    ai.focus(); dc.appendChild(f);
+  }
+  else if(type==="recurring"){
+    const t=div("drawer-title"); t.textContent="Transaction récurrente"; dc.appendChild(t);
+    const sr=el("div"); sr.style.cssText="font-size:.82rem;color:#505070;margin-bottom:1.2rem;"; sr.textContent="Ajouté automatiquement chaque mois ou chaque semaine."; dc.appendChild(sr);
+    const f=div("form-col");
+    const kindSel=mkSel([{value:"income",label:"💰 Revenu"},{value:"expense",label:"💸 Dépense"}],"expense");
+    const lr=mkInp("text","Ex : Loyer, Salaire…"),ar=mkInp("number","0");
+    const tsr=mkSel(state.incomeTypes,state.incomeTypes[0]);
+    const catSel=mkSel(cats.map(c=>({value:c.id,label:c.icon+" "+c.label})),cats[0]?.id);
+    const typeWrap=mkField("Type de revenu",tsr); typeWrap.style.display="none";
+    const catWrap=mkField("Catégorie",catSel);
+    kindSel.addEventListener("change",function(){
+      if(this.value==="expense"){ typeWrap.style.display="none"; catWrap.style.display=""; }
+      else { typeWrap.style.display=""; catWrap.style.display="none"; }
+    });
+    const freqr=mkSel([{value:"monthly",label:"Mensuel"},{value:"weekly",label:"Hebdomadaire (×4/mois)"}],"monthly"),dayr=mkInp("number","1");
+    dayr.min="1"; dayr.max="31"; dayr.placeholder="Jour du mois (1-31)";
+    const dayWrap=mkField("Jour du mois",dayr); freqr.addEventListener("change",function(){ dayWrap.style.display=this.value==="weekly"?"none":""; });
+    const dateLimite=mkInp("month",""); 
+    const dateLimiteWrap=mkField("Date de fin (optionnel)",dateLimite);
+    const cbRowR=div("",{display:"flex",alignItems:"center",gap:".8rem",padding:".4rem 0"});
+    const cbCheckR=el("input"); cbCheckR.type="checkbox"; cbCheckR.id="cb-diff-rec"; cbCheckR.style.cssText="width:20px;height:20px;accent-color:#e85d04;cursor:pointer;flex-shrink:0;";
+    const cbLabelR=el("label"); cbLabelR.htmlFor="cb-diff-rec"; cbLabelR.style.cssText="font-size:.88rem;font-weight:600;cursor:pointer;color:#e8e0f8;"; cbLabelR.textContent="💳 Débit différé";
+    cbRowR.appendChild(cbCheckR); cbRowR.appendChild(cbLabelR);
+    kindSel.addEventListener("change",function(){ cbRowR.style.display=this.value==="expense"?"":"none"; });
+    f.appendChild(mkField("Type",kindSel)); f.appendChild(mkField("Libellé",lr)); f.appendChild(mkField("Montant (€)",ar)); f.appendChild(typeWrap); f.appendChild(catWrap); f.appendChild(mkField("Fréquence",freqr)); f.appendChild(dayWrap); f.appendChild(cbRowR); f.appendChild(dateLimiteWrap);
+    f.appendChild(mkFooter("Enregistrer","btn-green",()=>{
+      const a=parseFloat(ar.value); if(!a||a<=0||!lr.value.trim()) return;
+      if(!state.recurring) state.recurring=[];
+      const rec={id:uid(),label:lr.value.trim(),amount:a,kind:kindSel.value,type:tsr.value,catId:catSel.value,frequency:freqr.value,dayOfMonth:parseInt(dayr.value)||1,dateFin:dateLimite.value||null,cbDiff:kindSel.value==="expense"&&cbCheckR.checked};
+      state.recurring.push(rec); saveState(); injectRecurring(); render(); closeDrawer(); notify("🔄 Récurrent ajouté !");
+    }));
+    lr.focus(); dc.appendChild(f);
+  }
+  else if(type==="debt"){
+    const t=div("drawer-title"); t.textContent="Ajouter une dette"; dc.appendChild(t);
+    const f=div("form-col"); const ni=mkInp("text","Crédit conso, loyer en retard…"),ti=mkInp("number","0"),nti=mkInp("text","Taux, créancier…");
+    let selIco="💳"; const icoRow=el("div"); icoRow.style.cssText="display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.4rem;";
+    DEBT_ICONS.forEach(em=>{ const b=el("button","emo-btn"+(em==="💳"?" sel":"")); b.textContent=em; b.addEventListener("click",()=>{ selIco=em; icoRow.querySelectorAll(".emo-btn").forEach(x=>x.classList.remove("sel")); b.classList.add("sel"); }); icoRow.appendChild(b); });
+    const iw=el("div"); const il=el("label"); il.textContent="Icône"; iw.appendChild(il); iw.appendChild(icoRow);
+    f.appendChild(mkField("Nom",ni)); f.appendChild(mkField("Montant total dû (€)",ti)); f.appendChild(mkField("Note",nti)); f.appendChild(iw);
+    f.appendChild(mkFooter("Ajouter","btn-orange",()=>{ const t2=parseFloat(ti.value); if(!ni.value||!t2||t2<=0) return; state.debts.push({id:uid(),name:ni.value,total:t2,remaining:t2,icon:selIco,note:nti.value,payments:[]}); saveState(); render(); closeDrawer(); notify("Dette ajoutée 🎯"); }));
+    ni.focus(); dc.appendChild(f);
+  }
+  else if(type.startsWith("pay:")){
+    const did=type.slice(4); const debt=state.debts.find(d=>d.id===did); if(!debt){closeDrawer();return;}
+    const t=div("drawer-title"); t.textContent="Remboursement"; dc.appendChild(t);
+    const sub=el("div"); sub.style.cssText="font-size:.85rem;color:#505070;margin-bottom:1.2rem;"; sub.textContent=`${debt.icon} ${debt.name} · ${fmt(debt.remaining)} restant`; dc.appendChild(sub);
+    const f=div("form-col"); const ai=mkInp("number","0"),ni=mkInp("text","Virement, prime…");
+    f.appendChild(mkField("Montant (€)",ai)); f.appendChild(mkField("Note",ni));
+    f.appendChild(mkFooter("💪 Valider","btn-orange",()=>{
+      const a=parseFloat(ai.value); if(!a||a<=0) return;
+      const paid=Math.min(a,debt.remaining);
+      state.debts=state.debts.map(d=>{ if(d.id!==did) return d; const p={id:uid(),amount:paid,note:ni.value,date:today()}; const rem=Math.max(0,d.remaining-paid); if(rem===0) setTimeout(()=>notify("🎉 Dette soldée ! Bravo !"),100); else notify(`-${fmt(paid)} remboursé 💪`); return {...d,remaining:rem,payments:[...(d.payments||[]),p]}; });
+      state.expenses.push({id:uid(),amount:paid,catId:"dettes",label:debt.name,date:today()});
+      saveState(); render(); closeDrawer();
+    }));
+    ai.focus(); dc.appendChild(f);
+  }
+  else if(type==="addcat"||type.startsWith("editcat:")){
+    const isEdit=type.startsWith("editcat:");
+    const editCat=isEdit?cats.find(c=>c.id===type.slice(8)):null;
+    const t=div("drawer-title"); t.textContent=isEdit?"Modifier la catégorie":"Nouvelle catégorie"; dc.appendChild(t);
+    const f=div("form-col");
+    const ni=mkInp("text","Ex : Épargne, Animaux, Cadeaux…",isEdit?editCat.label:"");
+    const wi=mkInp("number","10",isEdit?String(editCat.weight):"10"); wi.min="1"; wi.max="100";
+    let selIco=isEdit?editCat.icon:"📦";
+    const icoRow=el("div"); icoRow.style.cssText="display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.4rem;max-height:140px;overflow-y:auto;";
+    CAT_ICONS.forEach(em=>{ const b=el("button","emo-btn"+(em===selIco?" sel":"")); b.textContent=em; b.addEventListener("click",()=>{ selIco=em; icoRow.querySelectorAll(".emo-btn").forEach(x=>x.classList.remove("sel")); b.classList.add("sel"); }); icoRow.appendChild(b); });
+    const iw=el("div"); const il=el("label"); il.textContent="Icône"; iw.appendChild(il); iw.appendChild(icoRow);
+    f.appendChild(mkField("Nom de la catégorie",ni));
+    f.appendChild(mkField("Poids (part du budget, ex: 20 = 20%)",wi));
+    f.appendChild(iw);
+    f.appendChild(mkFooter(isEdit?"Enregistrer":"Ajouter","btn-orange",()=>{
+      if(!ni.value.trim()) return;
+      const wt=Math.max(1,parseInt(wi.value)||10);
+      if(isEdit){
+        state.cats=state.cats.map(c=>c.id===editCat.id?{...c,label:ni.value.trim(),icon:selIco,weight:wt}:c);
+        notify("Catégorie modifiée ✅");
+      } else {
+        if(!state.cats) state.cats=DEFAULT_CATS.map(c=>({...c}));
+        state.cats.push({id:uid(),label:ni.value.trim(),icon:selIco,weight:wt});
+        notify("Catégorie ajoutée ✅");
+      }
+      saveState(); render(); closeDrawer();
+    }));
+    ni.focus(); dc.appendChild(f);
+  }
+  else if(type.startsWith("editrecurring:")){
+    const rid=type.slice(14); const r=state.recurring.find(x=>x.id===rid); if(!r){closeDrawer();return;}
+    const t=div("drawer-title"); t.textContent="Modifier — "+r.label; dc.appendChild(t);
+    const f=div("form-col");
+    const kindSel=mkSel([{value:"income",label:"💰 Revenu"},{value:"expense",label:"💸 Dépense"}],r.kind||"expense");
+    const li=mkInp("text","Label",r.label);
+    const ai=mkInp("number","0",String(r.amount));
+    const di=mkInp("number","1",String(r.dayOfMonth||1)); di.min="1"; di.max="31";
+    const dfi=mkInp("month","",r.dateFin||"");
+    const tsr=mkSel(state.incomeTypes,r.type||state.incomeTypes[0]);
+    const catSel=mkSel(cats.map(c=>({value:c.id,label:c.icon+" "+c.label})),r.catId||cats[0]?.id);
+    const typeWrap=mkField("Type de revenu",tsr);
+    const catWrap=mkField("Catégorie",catSel);
+    const isExp0 = (r.kind === "expense");
+    typeWrap.style.display = isExp0 ? "none" : "";
+    catWrap.style.display  = isExp0 ? "" : "none";
+    const cbCheck=el("div"); cbCheck.style.cssText="display:flex;align-items:center;gap:.6rem;";
+    const cbInp=el("input"); cbInp.type="checkbox"; cbInp.checked=!!r.cbDiff; cbInp.style.cssText="width:18px;height:18px;accent-color:#f48c06;cursor:pointer;";
+    const cbLbl=el("label"); cbLbl.style.cssText="font-size:.85rem;color:#e8e0f8;text-transform:none;letter-spacing:0;"; cbLbl.textContent="💳 Débit différé (Revolut)";
+    cbCheck.appendChild(cbInp); cbCheck.appendChild(cbLbl);
+    cbCheck.style.display = isExp0 ? "" : "none";
+    kindSel.addEventListener("change", function(){
+      const isExp2 = this.value === "expense";
+      typeWrap.style.display = isExp2 ? "none" : "";
+      catWrap.style.display  = isExp2 ? "" : "none";
+      cbCheck.style.display  = isExp2 ? "" : "none";
+    });
+    f.appendChild(mkField("Type",kindSel));
+    f.appendChild(mkField("Label",li));
+    f.appendChild(mkField("Montant (€)",ai));
+    f.appendChild(typeWrap);
+    f.appendChild(catWrap);
+    f.appendChild(mkField("Jour du mois",di));
+    f.appendChild(mkField("Fin (optionnel, YYYY-MM)",dfi));
+    f.appendChild(cbCheck);
+    f.appendChild(mkFooter("Enregistrer","btn-orange",()=>{
+      const a=parseFloat(ai.value); if(!li.value||isNaN(a)) return;
+      const newKind = kindSel.value;
+      const kindChanged = newKind !== r.kind;
+      state.recurring=state.recurring.map(x=>x.id===rid?{...x,
+        kind: newKind,
+        type: tsr.value,
+        catId: catSel.value,
+        label: li.value.trim(),
+        amount: a,
+        dayOfMonth: parseInt(di.value)||x.dayOfMonth,
+        dateFin: dfi.value||null,
+        cbDiff: newKind==="expense" && cbInp.checked
+      }:x);
+      // Si le kind a changé : nettoyer les transactions injectées (revenus + dépenses) et regénérer
+      if(kindChanged){
+        state.expenses = state.expenses.filter(e=>e.fromRecurring!==rid);
+        state.incomes  = state.incomes.filter(i=>i.fromRecurring!==rid);
+      } else {
+        // Sinon, juste propager le changement de cbDiff aux transactions du mois
+        state.expenses = state.expenses.map(e=>e.fromRecurring===rid?{...e,cbDiff: newKind==="expense" && cbInp.checked}:e);
+      }
+      saveState(); injectRecurring(); render(); closeDrawer(); notify("Récurrent modifié ✅");
+    }));
+    li.focus(); dc.appendChild(f);
+  }
+  else if(type==="addvirement"){
+    const t=div("drawer-title"); t.textContent="Virement CB → Revolut"; dc.appendChild(t);
+    const f=div("form-col");
+    const ai=mkInp("number","0");
+    const ni=mkInp("text","Note…","");
+    const di=mkInp("date","",today());
+    f.appendChild(mkField("Montant (€)",ai));
+    f.appendChild(mkField("Note (optionnel)",ni));
+    f.appendChild(mkField("Date",di));
+    f.appendChild(mkFooter("Ajouter","btn-orange",()=>{
+      const a=parseFloat(ai.value); if(!a||a<=0) return;
+      if(!state.revolut_virements) state.revolut_virements=[];
+      state.revolut_virements.push({id:uid(),amount:a,note:ni.value||"Virement Revolut",date:di.value||today()});
+      saveState(); const pg=document.getElementById("page-plafond"); if(pg&&!pg.classList.contains("hidden"))renderPlafond(pg);
+      closeDrawer(); notify("Virement enregistré 💳");
+    }));
+    ai.focus(); dc.appendChild(f);
+  }
+  else if(type.startsWith("editincome:")){
+    const xid=type.slice(11); const x=state.incomes.find(i=>i.id===xid); if(!x){closeDrawer();return;}
+    const t=div("drawer-title"); t.textContent="Modifier le revenu"; dc.appendChild(t);
+    const f=div("form-col");
+    const ai=mkInp("number","0",String(x.amount));
+    const ni=mkInp("text","Note…",x.note||"");
+    const di=mkInp("date","",x.date);
+    if(!state.incomeTypes||!state.incomeTypes.length)state.incomeTypes=[...DEFAULT_INCOME_TYPES];
+    const ti=mkSel(state.incomeTypes,x.type||state.incomeTypes[0]);
+    f.appendChild(mkField("Montant (€)",ai));
+    f.appendChild(mkField("Type",ti));
+    f.appendChild(mkField("Note",ni));
+    f.appendChild(mkField("Date",di));
+    f.appendChild(mkFooter("Enregistrer","btn-green",()=>{
+      const a=parseFloat(ai.value); if(!a||a<=0) return;
+      state.incomes=state.incomes.map(i=>i.id===xid?{...i,amount:a,type:ti.value,note:ni.value,date:di.value||i.date}:i);
+      saveState(); render(); closeDrawer(); notify("Revenu modifié ✅");
+    }));
+    ai.focus(); dc.appendChild(f);
+  }
+  else if(type.startsWith("editexpense:")){
+    const xid=type.slice(12); const x=state.expenses.find(e=>e.id===xid); if(!x){closeDrawer();return;}
+    const t=div("drawer-title"); t.textContent="Modifier la dépense"; dc.appendChild(t);
+    const f=div("form-col");
+    const ai=mkInp("number","0",String(x.amount));
+    const li=mkInp("text","Label…",x.label||"");
+    const di=mkInp("date","",x.date);
+    const ci=mkSel(cats.map(c=>({value:c.id,label:c.icon+" "+c.label})),x.catId||cats[0]?.id);
+    const cbCheck=el("div"); cbCheck.style.cssText="display:flex;align-items:center;gap:.6rem;";
+    const cbInp=el("input"); cbInp.type="checkbox"; cbInp.checked=!!x.cbDiff; cbInp.style.cssText="width:18px;height:18px;accent-color:#f48c06;cursor:pointer;";
+    const cbLbl=el("label"); cbLbl.style.cssText="font-size:.85rem;color:#e8e0f8;text-transform:none;letter-spacing:0;"; cbLbl.textContent="💳 Achat CB différée (Revolut)";
+    cbCheck.appendChild(cbInp); cbCheck.appendChild(cbLbl);
+    f.appendChild(mkField("Montant (€)",ai));
+    f.appendChild(mkField("Catégorie",ci));
+    f.appendChild(mkField("Label",li));
+    f.appendChild(mkField("Date",di));
+    f.appendChild(cbCheck);
+    f.appendChild(mkFooter("Enregistrer","btn-orange",()=>{
+      const a=parseFloat(ai.value); if(!a||a<=0) return;
+      state.expenses=state.expenses.map(e=>e.id===xid?{...e,amount:a,catId:ci.value,label:li.value,date:di.value||e.date,cbDiff:cbInp.checked}:e);
+      saveState(); render(); closeDrawer(); notify("Dépense modifiée ✅");
+    }));
+    ai.focus(); dc.appendChild(f);
+  }
+  else if(type==="reconcileMain"){
+    // Solde théorique du compte principal aujourd'hui
+    const todayStr2=today();
+    const dateRef3=state.soldeDateRef||todayStr2;
+    const incAujourd=state.incomes.filter(x=>x.date>dateRef3&&x.date<=todayStr2&&!x.cbRevolut).reduce((a,x)=>a+(x.amount||0),0);
+    const expAujourd=state.expenses.filter(x=>x.date>dateRef3&&x.date<=todayStr2&&!x.cbDiff).reduce((a,x)=>a+(x.amount||0),0);
+    const theoriqueMain=(state.soldeDepart||0)+incAujourd-expAujourd;
+
+    const t=div("drawer-title"); t.textContent="🔧 Réconcilier compte principal"; dc.appendChild(t);
+    const sub=el("div"); sub.style.cssText="font-size:.82rem;color:#8080a0;margin-bottom:1.2rem;line-height:1.55;";
+    sub.innerHTML=`Solde théorique aujourd'hui&nbsp;: <strong style="color:#f48c06;">${fmt(theoriqueMain)}</strong><br><span style="color:#505070;">Tape ton vrai solde bancaire — l'app va recaler le solde de référence à aujourd'hui. L'historique est conservé.</span>`;
+    dc.appendChild(sub);
+
+    const f=div("form-col");
+    const reelInp=mkInp("number","ex: 1234.56",""); reelInp.step="0.01";
+    const previewDiv=el("div"); previewDiv.style.cssText="font-size:.85rem;padding:.8rem;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);margin-top:.3rem;display:none;";
+
+    reelInp.addEventListener("input",()=>{
+      const reel=parseFloat(reelInp.value);
+      if(isNaN(reel)){ previewDiv.style.display="none"; return; }
+      const ecart=reel-theoriqueMain;
+      previewDiv.style.display="";
+      if(Math.abs(ecart)<0.01){ previewDiv.innerHTML="✅ Aucun écart — la date sera juste recalée à aujourd&rsquo;hui"; previewDiv.style.color='#10b981'; }
+      else if(ecart>0){ previewDiv.innerHTML=`📥 Écart de <strong>+${fmt(ecart)}</strong> absorbé dans le nouveau solde de référence`; previewDiv.style.color='#10b981'; }
+      else { previewDiv.innerHTML=`📤 Écart de <strong>${fmt(ecart)}</strong> absorbé dans le nouveau solde de référence`; previewDiv.style.color='#f87171'; }
+    });
+
+    f.appendChild(mkField("Solde réel banque (€)",reelInp));
+    f.appendChild(previewDiv);
+    f.appendChild(mkFooter("Réconcilier","btn-orange",()=>{
+      const reel=parseFloat(reelInp.value);
+      if(isNaN(reel)) return;
+      // Simple : on prend ton solde réel comme nouveau point de référence à aujourd'hui.
+      state.soldeDepart=reel;
+      state.soldeDateRef=today();
+      saveState(); render(); closeDrawer(); notify("✅ Compte recalé");
+    }));
+    reelInp.focus(); dc.appendChild(f);
+  }
+  else if(type==="reconcile"){
+    // Solde théorique Revolut = virements du mois − achats cbDiff + crédits cbRevolut
+    const m = thisM();
+    const virementsM = (state.revolut_virements||[]).filter(v=>v.date.startsWith(m));
+    const totalVir = virementsM.reduce((s,v)=>s+(v.amount||0),0);
+    const cbDiffTotal = state.expenses.filter(e=>e.cbDiff).reduce((s,e)=>s+(e.amount||0),0);
+    const cbCredits = state.incomes.filter(i=>i.cbRevolut).reduce((s,i)=>s+(i.amount||0),0);
+    const theorique = totalVir - cbDiffTotal + cbCredits;
+
+    const t=div("drawer-title"); t.textContent="🔧 Réconcilier Revolut"; dc.appendChild(t);
+    const sub=el("div"); sub.style.cssText="font-size:.82rem;color:#8080a0;margin-bottom:1.2rem;line-height:1.55;";
+    sub.innerHTML=`Solde théorique calculé&nbsp;: <strong style="color:#f48c06;">${fmt(theorique)}</strong><br><span style="color:#505070;">Tape ton vrai solde Revolut, l'app va créer une ligne d'ajustement.</span>`;
+    dc.appendChild(sub);
+
+    const f=div("form-col");
+    const reelInp=mkInp("number","ex: 56.84",""); reelInp.step="0.01";
+    const noteInp=mkInp("text","Ajustement Revolut","Ajustement Revolut");
+    const dateInp=mkInp("date","",today());
+    const previewDiv=el("div"); previewDiv.style.cssText="font-size:.85rem;padding:.8rem;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);margin-top:.3rem;display:none;";
+
+    const updatePreview=()=>{
+      const reel=parseFloat(reelInp.value);
+      if(isNaN(reel)){ previewDiv.style.display="none"; return; }
+      const ecart=reel-theorique;
+      previewDiv.style.display="";
+      if(Math.abs(ecart)<0.01){ previewDiv.innerHTML='✅ Aucun écart, rien à faire'; previewDiv.style.color='#10b981'; }
+      else if(ecart>0){ previewDiv.innerHTML=`📥 Crédit de <strong>${fmt(ecart)}</strong> sera ajouté (cbRevolut)`; previewDiv.style.color='#10b981'; }
+      else { previewDiv.innerHTML=`📤 Dépense de <strong>${fmt(-ecart)}</strong> sera ajoutée (cbDiff)`; previewDiv.style.color='#f87171'; }
+    };
+    reelInp.addEventListener("input",updatePreview);
+
+    f.appendChild(mkField("Solde réel Revolut (€)",reelInp));
+    f.appendChild(mkField("Note",noteInp));
+    f.appendChild(mkField("Date",dateInp));
+    f.appendChild(previewDiv);
+    f.appendChild(mkFooter("Réconcilier","btn-orange",()=>{
+      const reel=parseFloat(reelInp.value);
+      if(isNaN(reel)) return;
+      const ecart=reel-theorique;
+      if(Math.abs(ecart)<0.01){ closeDrawer(); notify("Aucun écart à corriger"); return; }
+      const note=noteInp.value.trim()||"Ajustement Revolut";
+      const dt=dateInp.value||today();
+      if(ecart>0){
+        state.incomes.push({id:uid(),amount:ecart,type:"💳 Revolut",note:note,date:dt,cbRevolut:true});
+      } else {
+        const cats2=getCats();
+        const catId=(cats2.find(c=>c.id==="autre")||cats2[0]).id;
+        state.expenses.push({id:uid(),amount:-ecart,catId:catId,label:note,date:dt,cbDiff:true});
+      }
+      saveState(); render(); closeDrawer(); notify("✅ Réconcilié");
+    }));
+    reelInp.focus(); dc.appendChild(f);
+  }
+  else if(type==="arrondis"){
+    const t=div("drawer-title"); t.textContent="🪙 Arrondis RevPoints"; dc.appendChild(t);
+    const sub=el("div"); sub.style.cssText="font-size:.82rem;color:#8080a0;margin-bottom:1.2rem;line-height:1.55;";
+    sub.textContent="Saisis le total des arrondis RevPoints du mois en une seule ligne (cbDiff).";
+    dc.appendChild(sub);
+    const f=div("form-col");
+    const ai=mkInp("number","0"); ai.step="0.01";
+    const di=mkInp("date","",today());
+    f.appendChild(mkField("Montant total (€)",ai));
+    f.appendChild(mkField("Date",di));
+    f.appendChild(mkFooter("Ajouter","btn-orange",()=>{
+      const a=parseFloat(ai.value); if(!a||a<=0) return;
+      const cats2=getCats();
+      const catId=(cats2.find(c=>c.id==="autre")||cats2[0]).id;
+      state.expenses.push({id:uid(),amount:a,catId:catId,label:"🪙 Arrondis RevPoints",date:di.value||today(),cbDiff:true});
+      saveState(); render(); closeDrawer(); notify("Arrondis ajoutés ✅");
+    }));
+    ai.focus(); dc.appendChild(f);
+  }
+}
+
+/* ════════════════════════════════════
+   RENDER + NAV
+════════════════════════════════════ */
+function render(){
+  const cv=computed();
+  document.getElementById("hdr-sub").textContent=monthLbl();
+  ["dashboard","cashflow","plafond","debts","projection","settings"].forEach(p=>{
+    const pg=document.getElementById("page-"+p);
+    if(p===currentTab) pg.classList.remove("hidden"); else pg.classList.add("hidden");
+  });
+  const c=document.getElementById("page-"+currentTab);
+  if(currentTab==="dashboard")  renderDashboard(c);
+  if(currentTab==="cashflow")   renderCashflow(c);
+  if(currentTab==="plafond")    renderPlafond(c);
+  if(currentTab==="debts")      renderDebts(c);
+  if(currentTab==="projection") renderProjection(c);
+  if(currentTab==="settings")   renderSettings(c);
+}
+
+function switchTab(tab){
+  currentTab=tab;
+  document.querySelectorAll(".nav-item").forEach(i=>{ i.classList.remove("active"); if(i.dataset.tab===tab) i.classList.add("active"); });
+  render();
+}
+
+document.querySelectorAll(".nav-item").forEach(item=>{
+  item.addEventListener("click",function(){ switchTab(this.dataset.tab); });
+});
+
+/* ── Init ── */
+function quickSave(){
+  const data=JSON.stringify(state,null,2);
+  const blob=new Blob([data],{type:"application/json"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url; a.download="budget-sauvegarde.json";
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+  const btn=document.getElementById("btn-save-quick");
+  btn.style.opacity="1"; setTimeout(()=>btn.style.opacity=".35",1000);
+  notify("💾 Sauvegardé !");
+}
+loadState();
+injectRecurring();
+render();
+switchTab("dashboard");
+</script>
+</body>
+</html>
