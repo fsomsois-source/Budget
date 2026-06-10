@@ -1159,7 +1159,7 @@ function openDrawer(type){
       const a=parseFloat(ai.value); if(!a||a<=0) return;
       const paid=Math.min(a,debt.remaining);
       state.debts=state.debts.map(d=>{ if(d.id!==did) return d; const p={id:uid(),amount:paid,note:ni.value,date:today()}; const rem=Math.max(0,d.remaining-paid); if(rem===0) setTimeout(()=>notify("🎉 Dette soldée ! Bravo !"),100); else notify(`-${fmt(paid)} remboursé 💪`); return {...d,remaining:rem,payments:[...(d.payments||[]),p]}; });
-      state.expenses.push({id:uid(),amount:paid,catId:"dettes",label:debt.name,date:today()});
+      // Pas de création de dépense : la page Vini est purement informative et doit rester déconnectée des calculs du compte
       saveState(); render(); closeDrawer();
     }));
     ai.focus(); dc.appendChild(f);
