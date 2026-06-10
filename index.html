@@ -246,8 +246,8 @@ function computed(){
   // Tout ce qui est ≥ dernier 20 précédant soldeDateRef n'a pas encore été passé en bascule, donc à soustraire
   const dateRef = state.soldeDateRef||todayStr;
   const cycleRef = cycleStartFor(dateRef);
-  const totalIncApres = state.incomes.filter(x=>x.date>dateRef&&!x.cbRevolut).reduce((a,x)=>a+(x.amount||0),0);
-  const totalExpApres = state.expenses.filter(x=>x.date>dateRef&&!x.cbDiff).reduce((a,x)=>a+(x.amount||0),0);
+  const totalIncApres = state.incomes.filter(x=>x.date>=dateRef&&!x.cbRevolut).reduce((a,x)=>a+(x.amount||0),0);
+  const totalExpApres = state.expenses.filter(x=>x.date>=dateRef&&!x.cbDiff).reduce((a,x)=>a+(x.amount||0),0);
   const virNonPreleves=(state.revolut_virements||[]).filter(v=>v.date>=cycleRef).reduce((s,v)=>s+(v.amount||0),0);
   const cbAchatsNonPreleves=(state.cb_achats||[]).filter(a=>a.date>=cycleRef).reduce((s,a)=>s+(a.amount||0),0);
   const balance = (state.soldeDepart||0) - (state.differeEnAttente||0) + totalIncApres - totalExpApres - virNonPreleves - cbAchatsNonPreleves;
@@ -335,19 +335,20 @@ function renderDashboard(c){
   const now2=new Date(); ms.textContent=now2.toLocaleDateString("fr-FR",{weekday:"long",day:"2-digit",month:"long",year:"numeric"});
   ml.appendChild(ms); c.appendChild(ml);
 
-  // Même calcul que page CB : virements du mois − achats CB
+  // Même calcul que page CB : virements du cycle − achats CB, MAIS uniquement jusqu'à aujourd'hui (pas les projections futures)
   const nowM=new Date().toISOString().slice(0,7);
   const cycleS=cycleStart();
-  const totalVirementsBoard=(state.revolut_virements||[]).filter(v=>v.date>=cycleS).reduce((s,v)=>s+(v.amount||0),0);
-  const totalCreditsBoard=state.incomes.filter(x=>x.cbRevolut&&x.date>=cycleS).reduce((a,x)=>a+(x.amount||0),0);
-  const totalAchatsBoard=state.expenses.filter(x=>x.cbDiff&&x.date>=cycleS).reduce((a,x)=>a+(x.amount||0),0)-totalCreditsBoard;
+  const tdStr=today();
+  const totalVirementsBoard=(state.revolut_virements||[]).filter(v=>v.date>=cycleS&&v.date<=tdStr).reduce((s,v)=>s+(v.amount||0),0);
+  const totalCreditsBoard=state.incomes.filter(x=>x.cbRevolut&&x.date>=cycleS&&x.date<=tdStr).reduce((a,x)=>a+(x.amount||0),0);
+  const totalAchatsBoard=state.expenses.filter(x=>x.cbDiff&&x.date>=cycleS&&x.date<=tdStr).reduce((a,x)=>a+(x.amount||0),0)-totalCreditsBoard;
   const resteDebit2=Math.max(0,totalVirementsBoard-totalAchatsBoard);
 
   // Solde aujourd'hui = solde réel + transactions depuis date de référence jusqu'à aujourd'hui
   const todayStr2=today();
   const dateRef3=state.soldeDateRef||todayStr2;
-  const incAujourd=state.incomes.filter(x=>x.date>dateRef3&&x.date<=todayStr2&&!x.cbRevolut).reduce((a,x)=>a+(x.amount||0),0);
-  const expAujourd=state.expenses.filter(x=>x.date>dateRef3&&x.date<=todayStr2&&!x.cbDiff).reduce((a,x)=>a+(x.amount||0),0);
+  const incAujourd=state.incomes.filter(x=>x.date>=dateRef3&&x.date<=todayStr2&&!x.cbRevolut).reduce((a,x)=>a+(x.amount||0),0);
+  const expAujourd=state.expenses.filter(x=>x.date>=dateRef3&&x.date<=todayStr2&&!x.cbDiff).reduce((a,x)=>a+(x.amount||0),0);
   const soldeAujourd=(state.soldeDepart||0)+incAujourd-expAujourd;
 
   // Deux grandes cartes solde
@@ -880,8 +881,8 @@ function renderProjection(c){
 
   const dateRef2=state.soldeDateRef||today();
   const todayStr=today();
-  const totalIncApres2=state.incomes.filter(x=>x.date>dateRef2&&x.date<=todayStr&&!x.cbRevolut).reduce((a,x)=>a+(x.amount||0),0);
-  const totalExpApres2=state.expenses.filter(x=>x.date>dateRef2&&x.date<=todayStr&&!x.cbDiff).reduce((a,x)=>a+(x.amount||0),0);
+  const totalIncApres2=state.incomes.filter(x=>x.date>=dateRef2&&x.date<=todayStr&&!x.cbRevolut).reduce((a,x)=>a+(x.amount||0),0);
+  const totalExpApres2=state.expenses.filter(x=>x.date>=dateRef2&&x.date<=todayStr&&!x.cbDiff).reduce((a,x)=>a+(x.amount||0),0);
   const soldeAujourdhui=(state.soldeDepart||0)-(state.differeEnAttente||0)+totalIncApres2-totalExpApres2;
   const today2=new Date(); today2.setHours(0,0,0,0);
   const events=buildTresoEvents(tresoHorizon,tresoAvecVini);
@@ -1340,8 +1341,8 @@ function openDrawer(type){
     // Solde théorique du compte principal aujourd'hui
     const todayStr2=today();
     const dateRef3=state.soldeDateRef||todayStr2;
-    const incAujourd=state.incomes.filter(x=>x.date>dateRef3&&x.date<=todayStr2&&!x.cbRevolut).reduce((a,x)=>a+(x.amount||0),0);
-    const expAujourd=state.expenses.filter(x=>x.date>dateRef3&&x.date<=todayStr2&&!x.cbDiff).reduce((a,x)=>a+(x.amount||0),0);
+    const incAujourd=state.incomes.filter(x=>x.date>=dateRef3&&x.date<=todayStr2&&!x.cbRevolut).reduce((a,x)=>a+(x.amount||0),0);
+    const expAujourd=state.expenses.filter(x=>x.date>=dateRef3&&x.date<=todayStr2&&!x.cbDiff).reduce((a,x)=>a+(x.amount||0),0);
     const theoriqueMain=(state.soldeDepart||0)+incAujourd-expAujourd;
 
     const t=div("drawer-title"); t.textContent="🔧 Réconcilier compte principal"; dc.appendChild(t);
@@ -1377,11 +1378,13 @@ function openDrawer(type){
   }
   else if(type==="reconcile"){
     // Solde théorique Revolut = virements du cycle − achats cbDiff du cycle + crédits cbRevolut du cycle
+    // ⚠ On ne compte QUE jusqu'à aujourd'hui inclus (sinon les récurrents futurs projetés faussent la comparaison avec le solde Revolut réel)
     const cs=cycleStart();
-    const virementsM = (state.revolut_virements||[]).filter(v=>v.date>=cs);
+    const td=today();
+    const virementsM = (state.revolut_virements||[]).filter(v=>v.date>=cs&&v.date<=td);
     const totalVir = virementsM.reduce((s,v)=>s+(v.amount||0),0);
-    const cbDiffTotal = state.expenses.filter(e=>e.cbDiff&&e.date>=cs).reduce((s,e)=>s+(e.amount||0),0);
-    const cbCredits = state.incomes.filter(i=>i.cbRevolut&&i.date>=cs).reduce((s,i)=>s+(i.amount||0),0);
+    const cbDiffTotal = state.expenses.filter(e=>e.cbDiff&&e.date>=cs&&e.date<=td).reduce((s,e)=>s+(e.amount||0),0);
+    const cbCredits = state.incomes.filter(i=>i.cbRevolut&&i.date>=cs&&i.date<=td).reduce((s,i)=>s+(i.amount||0),0);
     const theorique = totalVir - cbDiffTotal + cbCredits;
 
     const t=div("drawer-title"); t.textContent="🔧 Réconcilier Revolut"; dc.appendChild(t);
