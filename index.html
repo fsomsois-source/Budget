@@ -242,13 +242,28 @@ function computed(){
   const monthIncome  = sumOf(incomesSansRemb.filter(x=>x.date<=todayStr),m);
   const monthDebtPay = sumOf(state.expenses.filter(e=>e.catId==="dettes"&&e.date<=todayStr),m);
   const monthExpense = sumOf(state.expenses.filter(e=>e.catId!=="dettes"&&e.date<=todayStr),m);
-  // Solde fin de mois = (soldeDepart − différé en attente) + transactions après dateRef − virements Revolut du cycle en cours
+  // Solde fin de mois = (soldeDepart − différé en attente) + transactions après dateRef − bascules non encore prélevées
+  // Tout virement/cb_achat daté ≥ dernier 20 précédant dateRef n'a pas encore été passé en bascule à la date du solde de référence
   const dateRef = state.soldeDateRef||todayStr;
+  const cycleRefBal = cycleStartFor(dateRef);
   const totalIncApres = state.incomes.filter(x=>x.date>dateRef&&!x.cbRevolut).reduce((a,x)=>a+(x.amount||0),0);
   const totalExpApres = state.expenses.filter(x=>x.date>dateRef&&!x.cbDiff).reduce((a,x)=>a+(x.amount||0),0);
-  const virCycleBalance=(state.revolut_virements||[]).filter(v=>v.date>=cycleStart()).reduce((s,v)=>s+(v.amount||0),0);
-  const cbAchatsCycle=(state.cb_achats||[]).filter(a=>a.date>=cycleStart()).reduce((s,a)=>s+(a.amount||0),0);
-  const balance = (state.soldeDepart||0) - (state.differeEnAttente||0) + totalIncApres - totalExpApres - virCycleBalance - cbAchatsCycle;
+  const virCycleBalance=(state.revolut_virements||[]).filter(v=>v.date>=cycleRefBal).reduce((s,v)=>s+(v.amount||0),0);
+  const cbAchatsCycle=(state.cb_achats||[]).filter(a=>a.date>=cycleRefBal).reduce((s,a)=>s+(a.amount||0),0);
+  // Estimation des dépenses variables à venir (courses, essence, sorties…) qui seront prélevées avant la fin du mois.
+  // Seules celles faites AVANT le prochain 20 comptent : elles partent à la bascule du 20 (dans le mois).
+  // Celles d'après le 20 partiront à la bascule du mois suivant.
+  let estimVariable=0;
+  if(state.budgetVariable>0){
+    const tNow=new Date(); tNow.setHours(0,0,0,0);
+    const next20=new Date(tNow); if(tNow.getDate()>=20) next20.setMonth(next20.getMonth()+1); next20.setDate(20);
+    const finMois=new Date(tNow.getFullYear(),tNow.getMonth()+1,0);
+    if(next20<=finMois){
+      const joursComptes=Math.max(0,Math.round((next20-tNow)/86400000)-1); // jusqu'au 19 inclus
+      estimVariable=Math.round(state.budgetVariable*joursComptes/30);
+    }
+  }
+  const balance = (state.soldeDepart||0) - (state.differeEnAttente||0) + totalIncApres - totalExpApres - virCycleBalance - cbAchatsCycle - estimVariable;
   const spentByCat   = {};
   cats.forEach(c=>{ spentByCat[c.id]=state.expenses.filter(e=>e.catId===c.id&&(e.date||"").startsWith(m)&&e.date<=todayStr).reduce((a,x)=>a+x.amount,0); });
   const totalDebt    = state.debts.reduce((a,d)=>a+(d.remaining||0),0);
@@ -258,7 +273,7 @@ function computed(){
   const plafondData  = computePlafond(avgIncome);
   const barData      = Array.from({length:5},(_,i)=>{const bd=new Date();bd.setMonth(bd.getMonth()-4+i);const bmm=bd.toISOString().slice(0,7);return{m:bd.toLocaleDateString("fr-FR",{month:"short"}),revenus:sumOf(state.incomes,bmm),depenses:state.expenses.filter(e=>(e.date||"").startsWith(bmm)).reduce((a,x)=>a+x.amount,0)};});
   const recentTx     = [...state.incomes.map(x=>({...x,_k:"in"})),...state.expenses.map(x=>({...x,_k:"out"}))].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,10);
-  return {monthIncome,monthDebtPay,monthExpense,balance,spentByCat,totalDebt,totalOrig,avgIncome,plafondData,barData,recentTx};
+  return {monthIncome,monthDebtPay,monthExpense,balance,estimVariable,spentByCat,totalDebt,totalOrig,avgIncome,plafondData,barData,recentTx};
 }
 
 /* ── DOM helpers ── */
@@ -269,6 +284,13 @@ function typeIcon(t){ if(!t) return "💰"; const arr=Array.from(t.trim()); retu
 // Date ISO du début du cycle CB en cours (le 20 du mois en cours, ou le 20 du mois précédent si on est avant le 20)
 function cycleStart(){
   const d=new Date(); d.setHours(0,0,0,0);
+  if(d.getDate()>=20){ d.setDate(20); }
+  else { d.setMonth(d.getMonth()-1); d.setDate(20); }
+  return d.toISOString().slice(0,10);
+}
+// Dernier 20 ≤ une date donnée — sert à savoir quelles bascules étaient déjà passées à cette date
+function cycleStartFor(dateStr){
+  const d=new Date(dateStr+"T00:00:00");
   if(d.getDate()>=20){ d.setDate(20); }
   else { d.setMonth(d.getMonth()-1); d.setDate(20); }
   return d.toISOString().slice(0,10);
@@ -326,12 +348,13 @@ function renderDashboard(c){
   const now2=new Date(); ms.textContent=now2.toLocaleDateString("fr-FR",{weekday:"long",day:"2-digit",month:"long",year:"numeric"});
   ml.appendChild(ms); c.appendChild(ml);
 
-  // Même calcul que page CB : virements du mois − achats CB
+  // Même calcul que page CB : virements du cycle − achats CB, limité à aujourd'hui (les récurrents futurs projetés ne sont pas encore débités de Revolut)
   const nowM=new Date().toISOString().slice(0,7);
   const cycleS=cycleStart();
-  const totalVirementsBoard=(state.revolut_virements||[]).filter(v=>v.date>=cycleS).reduce((s,v)=>s+(v.amount||0),0);
-  const totalCreditsBoard=state.incomes.filter(x=>x.cbRevolut&&x.date>=cycleS).reduce((a,x)=>a+(x.amount||0),0);
-  const totalAchatsBoard=state.expenses.filter(x=>x.cbDiff&&x.date>=cycleS).reduce((a,x)=>a+(x.amount||0),0)-totalCreditsBoard;
+  const tdStr=today();
+  const totalVirementsBoard=(state.revolut_virements||[]).filter(v=>v.date>=cycleS&&v.date<=tdStr).reduce((s,v)=>s+(v.amount||0),0);
+  const totalCreditsBoard=state.incomes.filter(x=>x.cbRevolut&&x.date>=cycleS&&x.date<=tdStr).reduce((a,x)=>a+(x.amount||0),0);
+  const totalAchatsBoard=state.expenses.filter(x=>x.cbDiff&&x.date>=cycleS&&x.date<=tdStr).reduce((a,x)=>a+(x.amount||0),0)-totalCreditsBoard;
   const resteDebit2=Math.max(0,totalVirementsBoard-totalAchatsBoard);
 
   // Solde aujourd'hui = solde réel + transactions depuis date de référence jusqu'à aujourd'hui
@@ -346,7 +369,7 @@ function renderDashboard(c){
   const cardAujourd=div("card",{padding:"1rem 1.1rem",background:soldeAujourd>=0?"rgba(16,185,129,.06)":"rgba(239,68,68,.06)",border:soldeAujourd>=0?"1px solid rgba(16,185,129,.2)":"1px solid rgba(239,68,68,.2)"});
   cardAujourd.innerHTML=`<div class="sec" style="margin-bottom:.2rem;">Aujourd'hui</div><div style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:900;color:${soldeAujourd>=0?"#10b981":"#f87171"};">${fmt(soldeAujourd)}</div>`;
   const cardFinMois=div("card",{padding:"1rem 1.1rem",background:cv.balance>=0?"rgba(16,185,129,.06)":"rgba(239,68,68,.06)",border:cv.balance>=0?"1px solid rgba(16,185,129,.2)":"1px solid rgba(239,68,68,.2)"});
-  cardFinMois.innerHTML=`<div class="sec" style="margin-bottom:.2rem;">Fin de mois</div><div style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:900;color:${cv.balance>=0?"#10b981":"#f87171"};">${fmt(cv.balance)}</div>`;
+  cardFinMois.innerHTML=`<div class="sec" style="margin-bottom:.2rem;">Fin de mois</div><div style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:900;color:${cv.balance>=0?"#10b981":"#f87171"};">${fmt(cv.balance)}</div>${cv.estimVariable>0?`<div style="font-size:.62rem;color:#505070;margin-top:.2rem;">dont −${fmt(cv.estimVariable)} variables estimées</div>`:""}`;
   soldeRow.appendChild(cardAujourd); soldeRow.appendChild(cardFinMois);
   c.appendChild(soldeRow);
 
@@ -429,7 +452,7 @@ function renderCashflow(c){
       const ico=span(isInc?typeIcon(r.type):(cat&&cat.icon)||"💸"); ico.style.fontSize="1.2rem";
       const info=el("div"); info.style.cssText="flex:1;min-width:0;";
       const nm=el("div"); nm.style.cssText="font-size:.86rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"; nm.textContent=r.label||r.type;
-      const freqTxt=`🔄 Mensuel · le ${r.dayOfMonth}`;
+      const freqTxt=r.frequency==="weekly"?"🔄 Hebdo (×4/mois)":`🔄 Mensuel · le ${r.dayOfMonth}`;
       const finTxt=r.dateFin?` · fin ${r.dateFin}`:"";
       const dt=el("div"); dt.style.cssText="font-size:.71rem;color:#f48c06;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"; dt.textContent=freqTxt+finTxt+(cat&&!isInc?" · "+cat.label:"");
       info.appendChild(nm); info.appendChild(dt);
@@ -518,10 +541,11 @@ function renderPlafond(c){
 
   // ── Section 1 : Virements CB → Revolut (cycle 20→20) ──
   const cs=cycleStart();
+  const tdNow=today();
   const virements=state.revolut_virements||[];
-  const virementsMonth=virements.filter(v=>v.date>=cs);
+  const virementsMonth=virements.filter(v=>v.date>=cs&&v.date<=tdNow);
   const totalVirements=virementsMonth.reduce((s,v)=>s+(v.amount||0),0);
-  const totalRevolut=state.incomes.filter(x=>x.cbRevolut&&x.date>=cs).reduce((a,x)=>a+(x.amount||0),0); const totalAchats=state.expenses.filter(x=>x.cbDiff&&!x.cbCredit&&x.date>=cs).reduce((a,x)=>a+(x.amount||0),0)-totalRevolut;
+  const totalRevolut=state.incomes.filter(x=>x.cbRevolut&&x.date>=cs&&x.date<=tdNow).reduce((a,x)=>a+(x.amount||0),0); const totalAchats=state.expenses.filter(x=>x.cbDiff&&!x.cbCredit&&x.date>=cs&&x.date<=tdNow).reduce((a,x)=>a+(x.amount||0),0)-totalRevolut;
   const resteVirements=Math.max(0,totalVirements-totalAchats);
   // Barre = virements virés / plafond cible (si plafond défini)
   const plafondV=state.enveloppeCB||0;
@@ -653,42 +677,49 @@ function renderPlafond(c){
   }
   c.appendChild(cbCard);
 
-  // ── Section 2 : Historique tous les mois ──
-  const allMonths=[...new Set(virements.map(v=>v.date.slice(0,7)))].sort().reverse();
-  if(allMonths.length>1||(allMonths.length===1&&allMonths[0]!==m)){
+  // ── Section 2 : Historique des bascules par cycle budgétaire (20→20) ──
+  // "avril 2026" = cycle du 20/04 au 19/05 ; bascule = virements + cb_achats de cette période
+  const budgetMonthOf=d=>cycleStartFor(d).slice(0,7);
+  const currentBM=budgetMonthOf(today());
+  const histMap={};
+  [...virements,...(state.cb_achats||[])].forEach(it=>{
+    const bm=budgetMonthOf(it.date);
+    if(bm===currentBM) return;
+    histMap[bm]=(histMap[bm]||0)+(it.amount||0);
+  });
+  const histMonths=Object.keys(histMap).sort().reverse();
+  if(histMonths.length){
     const histCard=div("card",{padding:"1.1rem 1.2rem",marginTop:".5rem"});
-    const histLbl=div("sec",{marginBottom:".6rem"}); histLbl.textContent="Historique";
+    const histLbl=div("sec",{marginBottom:".6rem"}); histLbl.textContent="Historique des bascules";
     histCard.appendChild(histLbl);
-    allMonths.filter(mo=>mo!==m).forEach(mo=>{
-      const moVirs=virements.filter(v=>v.date.startsWith(mo));
-      const moTotal=moVirs.reduce((s,v)=>s+(v.amount||0),0);
+    histMonths.forEach(mo=>{
       const moDate=new Date(mo+"-01");
       const moLbl=moDate.toLocaleDateString("fr-FR",{month:"long",year:"numeric"});
       const row=div("",{display:"flex",justifyContent:"space-between",padding:".5rem 0",borderBottom:"1px solid rgba(255,255,255,.04)"});
-      const lbl=span(moLbl); lbl.style.cssText="font-size:.85rem;color:#8080a0;";
-      const amt=span(fmt(moTotal)); amt.style.cssText="font-weight:700;color:#f48c06;";
+      const lbl=span(moLbl+" (20→20)"); lbl.style.cssText="font-size:.85rem;color:#8080a0;";
+      const amt=span(fmt(histMap[mo])); amt.style.cssText="font-weight:700;color:#f48c06;";
       row.appendChild(lbl); row.appendChild(amt);
       histCard.appendChild(row);
     });
     c.appendChild(histCard);
   }
 
-  // ── Section 3 : Achats CB différée (suivi Revolut) ──
-  const cbExps=state.expenses.filter(x=>x.cbDiff&&!x.cbCredit);
-  const cbCredits=state.incomes.filter(x=>x.cbRevolut);
-  const cbRevolutTotal=state.incomes.filter(x=>x.cbRevolut).reduce((a,x)=>a+(x.amount||0),0);
+  // ── Section 3 : Achats CB différée (suivi Revolut) — cycle 20→20, jusqu'à aujourd'hui ──
+  const cbExps=state.expenses.filter(x=>x.cbDiff&&!x.cbCredit&&x.date>=cs&&x.date<=tdNow);
+  const cbCredits=state.incomes.filter(x=>x.cbRevolut&&x.date>=cs&&x.date<=tdNow);
+  const cbRevolutTotal=cbCredits.reduce((a,x)=>a+(x.amount||0),0);
   const depuisBascule=cbExps.reduce((a,x)=>a+(x.amount||0),0)-cbRevolutTotal;
-  if(depuisBascule>0){
+  if(cbExps.length||cbCredits.length){
     const cbCard=div("card",{padding:"1.1rem 1.2rem",marginTop:".5rem"});
     const cbLbl=div("sec",{marginBottom:".4rem"}); cbLbl.textContent="Achats sur compte Revolut";
     cbCard.appendChild(cbLbl);
     const cbNum=el("div"); cbNum.style.cssText=`font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:800;color:#e8e0f8;margin-bottom:.6rem;`;
     cbNum.textContent=fmt(depuisBascule);
     cbCard.appendChild(cbNum);
-    // Liste détaillée
+    // Liste détaillée avec suppression (utile pour annuler arrondis ou erreurs de saisie)
     const allCbRows=[
-      ...cbExps.map(x=>({date:x.date,label:x.label||"Achat",amount:x.amount,credit:false})),
-      ...state.incomes.filter(x=>x.cbRevolut).map(x=>({date:x.date,label:"↩️ "+x.note,amount:x.amount,credit:true}))
+      ...cbExps.map(x=>({id:x.id,date:x.date,label:x.label||"Achat",amount:x.amount,credit:false})),
+      ...cbCredits.map(x=>({id:x.id,date:x.date,label:"↩️ "+x.note,amount:x.amount,credit:true}))
     ].sort((a,b)=>new Date(b.date)-new Date(a.date));
     allCbRows.forEach(x=>{
       const row=div("tx");
@@ -697,8 +728,12 @@ function renderPlafond(c){
       const nm=el("div"); nm.style.cssText="font-size:.86rem;font-weight:600;"; nm.textContent=x.label;
       const dt=el("div"); dt.style.cssText="font-size:.71rem;color:#505070;"; dt.textContent=fmtD(x.date);
       info.appendChild(nm); info.appendChild(dt);
-      const amt=span((x.credit?"+":"")+fmt(x.amount)); amt.style.cssText=`color:${x.credit?"#10b981":"#f48c06"};font-weight:700;font-size:.9rem;flex-shrink:0;`;
-      row.appendChild(ico); row.appendChild(info); row.appendChild(amt);
+      const right=el("div"); right.style.cssText="display:flex;align-items:center;gap:.5rem;flex-shrink:0;";
+      const amt=span((x.credit?"+":"")+fmt(x.amount)); amt.style.cssText=`color:${x.credit?"#10b981":"#f48c06"};font-weight:700;font-size:.9rem;`;
+      const del=el("button","btn-danger"); del.textContent="✕"; const xid=x.id, isCred=x.credit;
+      del.addEventListener("click",()=>{ confirmAction("Supprimer cette ligne ?",()=>{ if(isCred) state.incomes=state.incomes.filter(i=>i.id!==xid); else state.expenses=state.expenses.filter(e=>e.id!==xid); saveState(); renderPlafond(c); notify("Supprimé"); }); });
+      right.appendChild(amt); right.appendChild(del);
+      row.appendChild(ico); row.appendChild(info); row.appendChild(right);
       cbCard.appendChild(row);
     });
     c.appendChild(cbCard);
@@ -767,15 +802,11 @@ function buildTresoEvents(days, avecVini=false){
     if(d>today2) events.push({date:x.date,label:x.label||"Dépense",amount:-x.amount,kind:"out",auto:false});
   });
 
-  // Bascules CB futures basées sur les virements Revolut du cycle en cours
-  // Hypothèse : prélèvement le dernier jour du mois suivant chaque cycle "20→20"
-  // Le cycle en cours = depuis le 20 du mois en cours (ou le 20 du mois précédent si on est avant le 20)
+  // Bascules CB futures : prélèvement le 20 de chaque mois (fin de cycle 20→20)
+  // La 1ère bascule à venir = le prochain 20, pour le montant du cycle en cours (virements + cb_achats depuis le dernier 20)
+  // Les suivantes sont estimées au même montant
   {
-    const todayDay=today2.getDate();
-    const startCycle=new Date(today2);
-    if(todayDay>=20){ startCycle.setDate(20); startCycle.setHours(0,0,0,0); }
-    else { startCycle.setMonth(today2.getMonth()-1); startCycle.setDate(20); startCycle.setHours(0,0,0,0); }
-    const startCycleStr=startCycle.toISOString().slice(0,10);
+    const startCycleStr=cycleStart();
     const baseVirements=(state.revolut_virements||[])
       .filter(v=>v.date>=startCycleStr)
       .reduce((s,v)=>s+(v.amount||0),0);
@@ -784,23 +815,11 @@ function buildTresoEvents(days, avecVini=false){
       .reduce((s,a)=>s+(a.amount||0),0);
     const baseTotal=baseVirements+baseAchats;
     if(baseTotal>0){
-      // On projette ce montant comme prélèvement le dernier jour de chaque mois suivant
-      // pour les cycles à venir dans la fenêtre `days`
-      // Le 1er prélèvement futur = dernier jour du mois courant si on est avant la fin du cycle (avant le 20 prochain)
-      // Logique simplifiée : on injecte au dernier jour du mois suivant le 20 de fin de cycle
       const dayMs=86400000;
       for(let i=1;i<=days;i++){
         const d=new Date(today2.getTime()+i*dayMs);
-        // Dernier jour du mois ?
-        const tomorrow=new Date(d.getTime()+dayMs);
-        if(tomorrow.getMonth()!==d.getMonth()){
-          // d est le dernier jour de son mois
-          // On y injecte la bascule, mais seulement si elle correspond à un cycle après le cycle en cours
-          // Cycle en cours se termine le 20 du mois courant ou prochain
-          const endCycle=new Date(startCycle); endCycle.setMonth(endCycle.getMonth()+1);
-          if(d>=endCycle){
-            events.push({date:d.toISOString().slice(0,10),label:"Bascule CB (estim.)",amount:-baseTotal,kind:"out",auto:true,bascule:true});
-          }
+        if(d.getDate()===20){
+          events.push({date:d.toISOString().slice(0,10),label:"Bascule CB (estim.)",amount:-baseTotal,kind:"out",auto:true,bascule:true});
         }
       }
     }
@@ -933,6 +952,20 @@ function renderSettings(c){
   }); diffBtn.style.flexShrink="0";
   diffRow.appendChild(diffInp); diffRow.appendChild(diffBtn); diffCard.appendChild(diffRow);
   c.appendChild(diffCard);
+
+  // Dépenses variables estimées
+  const varCard=div("card",{padding:"1.1rem 1.2rem",marginBottom:".5rem"});
+  varCard.innerHTML='<div style="font-family:\'Syne\',sans-serif;font-size:1rem;font-weight:800;margin-bottom:.3rem;">📊 Dépenses variables estimées</div><div style="font-size:.75rem;color:#505070;margin-bottom:.8rem;">Estimation mensuelle de tes dépenses courantes pas encore saisies (courses, essence, sorties…). Le solde Fin de mois en déduit la part qui sera prélevée avant la fin du mois (achats faits avant le prochain 20). Mets 0 pour désactiver.</div>';
+  const varRow=div("",{display:"flex",gap:".6rem",alignItems:"center"});
+  const varInp=mkInp("number","ex: 600",String(state.budgetVariable||0));
+  varInp.style.flex="1";
+  const varBtn=btn("OK","btn btn-orange",()=>{
+    const v=parseFloat(varInp.value)||0;
+    state.budgetVariable=Math.max(0,v);
+    saveState(); render(); notify("Budget variable mis à jour ✅");
+  }); varBtn.style.flexShrink="0";
+  varRow.appendChild(varInp); varRow.appendChild(varBtn); varCard.appendChild(varRow);
+  c.appendChild(varCard);
 
   // Objectif de marge mensuelle
   // Types de revenus
@@ -1134,7 +1167,7 @@ function openDrawer(type){
       const a=parseFloat(ai.value); if(!a||a<=0) return;
       const paid=Math.min(a,debt.remaining);
       state.debts=state.debts.map(d=>{ if(d.id!==did) return d; const p={id:uid(),amount:paid,note:ni.value,date:today()}; const rem=Math.max(0,d.remaining-paid); if(rem===0) setTimeout(()=>notify("🎉 Dette soldée ! Bravo !"),100); else notify(`-${fmt(paid)} remboursé 💪`); return {...d,remaining:rem,payments:[...(d.payments||[]),p]}; });
-      state.expenses.push({id:uid(),amount:paid,catId:"dettes",label:debt.name,date:today()});
+      // Suivi purement informatif : aucune dépense n'est créée sur le compte principal
       saveState(); render(); closeDrawer();
     }));
     ai.focus(); dc.appendChild(f);
@@ -1352,12 +1385,14 @@ function openDrawer(type){
     reelInp.focus(); dc.appendChild(f);
   }
   else if(type==="reconcile"){
-    // Solde théorique Revolut = virements du cycle − achats cbDiff du cycle + crédits cbRevolut du cycle
+    // Solde théorique Revolut = virements − achats cbDiff + crédits cbRevolut du cycle, limité à aujourd'hui
+    // (les récurrents futurs projetés ne sont pas encore débités du compte Revolut réel)
     const cs=cycleStart();
-    const virementsM = (state.revolut_virements||[]).filter(v=>v.date>=cs);
+    const tdR=today();
+    const virementsM = (state.revolut_virements||[]).filter(v=>v.date>=cs&&v.date<=tdR);
     const totalVir = virementsM.reduce((s,v)=>s+(v.amount||0),0);
-    const cbDiffTotal = state.expenses.filter(e=>e.cbDiff&&e.date>=cs).reduce((s,e)=>s+(e.amount||0),0);
-    const cbCredits = state.incomes.filter(i=>i.cbRevolut&&i.date>=cs).reduce((s,i)=>s+(i.amount||0),0);
+    const cbDiffTotal = state.expenses.filter(e=>e.cbDiff&&e.date>=cs&&e.date<=tdR).reduce((s,e)=>s+(e.amount||0),0);
+    const cbCredits = state.incomes.filter(i=>i.cbRevolut&&i.date>=cs&&i.date<=tdR).reduce((s,i)=>s+(i.amount||0),0);
     const theorique = totalVir - cbDiffTotal + cbCredits;
 
     const t=div("drawer-title"); t.textContent="🔧 Réconcilier Revolut"; dc.appendChild(t);
