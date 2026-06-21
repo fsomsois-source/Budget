@@ -252,7 +252,7 @@ function computed(){
   const dateRef = state.soldeDateRef||todayStr;
   const cycleRefBal = cycleStartFor(dateRef);
   const totalIncApres = state.incomes.filter(x=>x.date>=dateRef&&!x.cbRevolut).reduce((a,x)=>a+(x.amount||0),0);
-  const totalExpApres = state.expenses.filter(x=>x.date>=dateRef&&!x.cbDiff).reduce((a,x)=>a+(x.amount||0),0);
+  const totalExpApres = state.expenses.filter(x=>x.date>=dateRef&&!x.cbDiff&&x.catId!=="virement_revolut").reduce((a,x)=>a+(x.amount||0),0);
   const virCycleBalance=(state.revolut_virements||[]).filter(v=>v.date>=cycleRefBal).reduce((s,v)=>s+(v.amount||0),0);
   const cbAchatsCycle=(state.cb_achats||[]).filter(a=>a.date>=cycleRefBal).reduce((s,a)=>s+(a.amount||0),0);
   // Estimation des dépenses variables à venir (courses, essence, sorties…) qui seront prélevées avant la fin du mois.
@@ -367,7 +367,7 @@ function renderDashboard(c){
   const todayStr2=today();
   const dateRef3=state.soldeDateRef||todayStr2;
   const incAujourd=state.incomes.filter(x=>x.date>=dateRef3&&x.date<=todayStr2&&!x.cbRevolut).reduce((a,x)=>a+(x.amount||0),0);
-  const expAujourd=state.expenses.filter(x=>x.date>=dateRef3&&x.date<=todayStr2&&!x.cbDiff).reduce((a,x)=>a+(x.amount||0),0);
+  const expAujourd=state.expenses.filter(x=>x.date>=dateRef3&&x.date<=todayStr2&&!x.cbDiff&&x.catId!=="virement_revolut").reduce((a,x)=>a+(x.amount||0),0);
   const soldeAujourd=(state.soldeDepart||0)+incAujourd-expAujourd;
 
   // Deux grandes cartes solde
@@ -910,7 +910,7 @@ function renderProjection(c){
   const dateRef2=state.soldeDateRef||today();
   const todayStr=today();
   const totalIncApres2=state.incomes.filter(x=>x.date>=dateRef2&&x.date<=todayStr&&!x.cbRevolut).reduce((a,x)=>a+(x.amount||0),0);
-  const totalExpApres2=state.expenses.filter(x=>x.date>=dateRef2&&x.date<=todayStr&&!x.cbDiff).reduce((a,x)=>a+(x.amount||0),0);
+  const totalExpApres2=state.expenses.filter(x=>x.date>=dateRef2&&x.date<=todayStr&&!x.cbDiff&&x.catId!=="virement_revolut").reduce((a,x)=>a+(x.amount||0),0);
   const soldeAujourdhui=(state.soldeDepart||0)-(state.differeEnAttente||0)+totalIncApres2-totalExpApres2;
   const today2=new Date(); today2.setHours(0,0,0,0);
   const events=buildTresoEvents(tresoHorizon,tresoAvecVini);
