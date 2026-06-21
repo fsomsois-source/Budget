@@ -361,8 +361,8 @@ function renderDashboard(c){
   // Solde aujourd'hui = solde réel + transactions depuis date de référence jusqu'à aujourd'hui
   const todayStr2=today();
   const dateRef3=state.soldeDateRef||todayStr2;
-  const incAujourd=state.incomes.filter(x=>x.date>dateRef3&&x.date<=todayStr2&&!x.cbRevolut).reduce((a,x)=>a+(x.amount||0),0);
-  const expAujourd=state.expenses.filter(x=>x.date>dateRef3&&x.date<=todayStr2&&!x.cbDiff).reduce((a,x)=>a+(x.amount||0),0);
+  const incAujourd=state.incomes.filter(x=>x.date>=dateRef3&&x.date<=todayStr2&&!x.cbRevolut).reduce((a,x)=>a+(x.amount||0),0);
+  const expAujourd=state.expenses.filter(x=>x.date>=dateRef3&&x.date<=todayStr2&&!x.cbDiff).reduce((a,x)=>a+(x.amount||0),0);
   const soldeAujourd=(state.soldeDepart||0)+incAujourd-expAujourd;
 
   // Deux grandes cartes solde
