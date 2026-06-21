@@ -169,6 +169,9 @@ function loadState(){
     if(!state.cb_achats) state.cb_achats = [];
     if(!state.differeEnAttente) state.differeEnAttente = 0;
     if(!state.bascules_manuelles) state.bascules_manuelles = [];
+    // Injecter les catégories système manquantes (migration)
+    const SYSTEM_CATS = [{id:"virement_revolut", label:"Virement Revolut", icon:"💳", weight:7}];
+    SYSTEM_CATS.forEach(sc => { if(!state.cats.find(c=>c.id===sc.id)) state.cats.push(sc); });
   } catch(e){}
 }
 
