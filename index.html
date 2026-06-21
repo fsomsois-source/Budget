@@ -144,7 +144,7 @@ const DEFAULT_INCOME_TYPES = ["💼 Freelance","🏆 Prime","🎁 Virement","�
 const CAT_ICONS    = ["🏠","🛒","🚗","💊","📱","🎉","👗","📦","🍽️","🎓","💡","🏋️","🐶","🌿","🎮","✈️","🏖️","💈","🎨","🧴","🧸","🏥","📚","🎵","🔧","🛍️","💻","📸","💸","↩️","🔄","🏧","💰","🎁","🤝","⚽","🚿","🧹","🪴","🍷","☕","🚌","🚂","🛳️","🎪","🎭","🎬","🏨","🔑","📋","🩺","💉","🧳","🎒","👶","🧒","👴","🌍"];
 
 /* ── State ── */
-let state = {incomes:[], expenses:[], debts:[], recurring:[], cats: DEFAULT_CATS.map(c=>({...c})), incomeTypes: [...DEFAULT_INCOME_TYPES], soldeDepart: 0, soldeDateRef: "", limiteCBDiff: 0, jourBascule: 20, enveloppeCB: 0, revolut_virements: [], cb_achats: [], differeEnAttente: 0, margeCible: 0};
+let state = {incomes:[], expenses:[], debts:[], recurring:[], cats: DEFAULT_CATS.map(c=>({...c})), incomeTypes: [...DEFAULT_INCOME_TYPES], soldeDepart: 0, soldeDateRef: "", limiteCBDiff: 0, jourBascule: 20, enveloppeCB: 0, revolut_virements: [], cb_achats: [], differeEnAttente: 0, margeCible: 0, bascules_manuelles: []};
 let currentTab = "dashboard";
 let simVal     = 80;
 let toastTimer = null;
@@ -167,6 +167,7 @@ function loadState(){
     if(!state.revolut_virements) state.revolut_virements = [];
     if(!state.cb_achats) state.cb_achats = [];
     if(!state.differeEnAttente) state.differeEnAttente = 0;
+    if(!state.bascules_manuelles) state.bascules_manuelles = [];
   } catch(e){}
 }
 
@@ -606,13 +607,15 @@ function renderPlafond(c){
   addVBtn.style.cssText="width:100%;margin-top:.8rem;";
   vCard.appendChild(addVBtn);
 
-  // Boutons Réconcilier + Arrondis RevPoints
-  const utilRow=div("",{display:"grid",gridTemplateColumns:"1fr 1fr",gap:".5rem",marginTop:".5rem"});
+  // Boutons Réconcilier + Arrondis RevPoints + Bascule
+  const utilRow=div("",{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:".5rem",marginTop:".5rem"});
   const reconcileBtn=btn("🔧 Réconcilier","btn btn-ghost",()=>openDrawer("reconcile"));
   reconcileBtn.style.cssText="font-size:.78rem;padding:.6rem .4rem;";
   const arrondisBtn=btn("🪙 Arrondis","btn btn-ghost",()=>openDrawer("arrondis"));
   arrondisBtn.style.cssText="font-size:.78rem;padding:.6rem .4rem;";
-  utilRow.appendChild(reconcileBtn); utilRow.appendChild(arrondisBtn);
+  const basculeBtn=btn("🔁 Bascule","btn btn-ghost",()=>openDrawer("bascule"));
+  basculeBtn.style.cssText="font-size:.78rem;padding:.6rem .4rem;";
+  utilRow.appendChild(reconcileBtn); utilRow.appendChild(arrondisBtn); utilRow.appendChild(basculeBtn);
   vCard.appendChild(utilRow);
 
   // Liste virements du mois
@@ -691,28 +694,39 @@ function renderPlafond(c){
   }
   c.appendChild(cbCard);
 
-  // ── Section 2 : Historique des bascules par cycle budgétaire (20→20) ──
-  // "avril 2026" = cycle du 20/04 au 19/05 ; bascule = virements + cb_achats de cette période
+  // ── Section 2 : Historique des bascules ──
+  // Priorité aux bascules manuelles ; fallback sur calcul auto virements+cb_achats pour cycles sans bascule manuelle
   const budgetMonthOf=d=>cycleStartFor(d).slice(0,7);
   const currentBM=budgetMonthOf(today());
-  const histMap={};
+  // Bascules manuelles indexées par cycleStart (YYYY-MM)
+  const manualMap={};
+  (state.bascules_manuelles||[]).forEach(b=>{ manualMap[b.cycleStart.slice(0,7)]=b; });
+  // Calcul auto pour les cycles sans bascule manuelle
+  const autoMap={};
   [...virements,...(state.cb_achats||[])].forEach(it=>{
     const bm=budgetMonthOf(it.date);
     if(bm===currentBM) return;
-    histMap[bm]=(histMap[bm]||0)+(it.amount||0);
+    if(manualMap[bm]) return; // cycle couvert par bascule manuelle → on utilise les données de la bascule
+    autoMap[bm]=(autoMap[bm]||0)+(it.amount||0);
   });
-  const histMonths=Object.keys(histMap).sort().reverse();
+  // Fusionner les deux sources
+  const allHistKeys=new Set([...Object.keys(manualMap),...Object.keys(autoMap)]);
+  const histMonths=[...allHistKeys].filter(m=>m!==currentBM).sort().reverse();
   if(histMonths.length){
     const histCard=div("card",{padding:"1.1rem 1.2rem",marginTop:".5rem"});
     const histLbl=div("sec",{marginBottom:".6rem"}); histLbl.textContent="Historique des bascules";
     histCard.appendChild(histLbl);
     histMonths.forEach(mo=>{
-      const moDate=new Date(mo+"-01");
-      const moLbl=moDate.toLocaleDateString("fr-FR",{month:"long",year:"numeric"});
-      const row=div("",{display:"flex",justifyContent:"space-between",padding:".5rem 0",borderBottom:"1px solid rgba(255,255,255,.04)"});
-      const lbl=span(moLbl+" (20→20)"); lbl.style.cssText="font-size:.85rem;color:#8080a0;";
-      const amt=span(fmt(histMap[mo])); amt.style.cssText="font-weight:700;color:#f48c06;";
-      row.appendChild(lbl); row.appendChild(amt);
+      const isManual=!!manualMap[mo];
+      const total=isManual?manualMap[mo].total:(autoMap[mo]||0);
+      const lbl2=isManual?manualMap[mo].cycleLabel:(new Date(mo+"-01").toLocaleDateString("fr-FR",{month:"long",year:"numeric"})+" (20→20)");
+      const row=div("",{display:"flex",justifyContent:"space-between",alignItems:"center",padding:".5rem 0",borderBottom:"1px solid rgba(255,255,255,.04)"});
+      const lblEl=el("div");
+      const lblTxt=span(lbl2); lblTxt.style.cssText="font-size:.85rem;color:#8080a0;display:block;";
+      lblEl.appendChild(lblTxt);
+      if(isManual){ const tag=span("bascule manuelle"); tag.style.cssText="font-size:.65rem;color:#6ee7b7;background:rgba(16,185,129,.12);padding:.1rem .4rem;border-radius:6px;"; lblEl.appendChild(tag); }
+      const amt=span(fmt(total)); amt.style.cssText="font-weight:700;color:#f48c06;flex-shrink:0;margin-left:.5rem;";
+      row.appendChild(lblEl); row.appendChild(amt);
       histCard.appendChild(row);
     });
     c.appendChild(histCard);
@@ -1471,6 +1485,48 @@ function openDrawer(type){
       saveState(); render(); closeDrawer(); notify("Arrondis ajoutés ✅");
     }));
     ai.focus(); dc.appendChild(f);
+  }
+  else if(type==="bascule"){
+    const cs2=cycleStart();
+    const tdNow2=today();
+    const virsCycle=(state.revolut_virements||[]).filter(v=>v.date>=cs2&&v.date<=tdNow2);
+    const cbCycle=(state.cb_achats||[]).filter(a=>a.date>=cs2&&a.date<=tdNow2);
+    const totalVirsBascule=virsCycle.reduce((s,v)=>s+(v.amount||0),0);
+    const totalCbBascule=cbCycle.reduce((s,a)=>s+(a.amount||0),0);
+    const totalBascule=totalVirsBascule+totalCbBascule;
+    // Label du cycle : "juin 2026 (20→20)"
+    const csDate=new Date(cs2+"T00:00:00");
+    const cycleLbl=csDate.toLocaleDateString("fr-FR",{month:"long",year:"numeric"})+" (20→20)";
+
+    const t=div("drawer-title"); t.textContent="🔁 Déclencher la bascule"; dc.appendChild(t);
+    const sub=el("div"); sub.style.cssText="font-size:.82rem;color:#8080a0;margin-bottom:1.2rem;line-height:1.6;";
+    sub.innerHTML=`Cycle en cours&nbsp;: <strong style="color:#e8e0f8;">${cycleLbl}</strong><br>
+Virements&nbsp;: <strong style="color:#f48c06;">${fmt(totalVirsBascule)}</strong><br>
+Autres achats CB&nbsp;: <strong style="color:#f48c06;">${fmt(totalCbBascule)}</strong><br>
+<strong style="color:#fbbf24;">Total bascule&nbsp;: ${fmt(totalBascule)}</strong>`;
+    dc.appendChild(sub);
+
+    const warn=div("info-box info-orange",{marginBottom:"1rem"});
+    warn.textContent="Cette action ferme le cycle et l'enregistre dans l'historique. Elle ne modifie pas tes données existantes.";
+    dc.appendChild(warn);
+
+    const f=div("form-col");
+    const dateInp2=mkInp("date","",today());
+    f.appendChild(mkField("Date de la bascule",dateInp2));
+    f.appendChild(mkFooter("Confirmer la bascule","btn-orange",()=>{
+      const bm=cs2.slice(0,7);
+      state.bascules_manuelles.push({
+        id:uid(),
+        date:dateInp2.value||today(),
+        cycleStart:cs2,
+        cycleLabel:cycleLbl,
+        totalVirements:totalVirsBascule,
+        totalCbAchats:totalCbBascule,
+        total:totalBascule
+      });
+      saveState(); render(); closeDrawer(); notify("🔁 Bascule enregistrée !");
+    }));
+    dc.appendChild(f);
   }
 }
 
