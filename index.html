@@ -1487,20 +1487,43 @@ function openDrawer(type){
     ai.focus(); dc.appendChild(f);
   }
   else if(type==="bascule"){
-    const cs2=cycleStart();
-    const tdNow2=today();
-    const virsCycle=(state.revolut_virements||[]).filter(v=>v.date>=cs2&&v.date<=tdNow2);
-    const cbCycle=(state.cb_achats||[]).filter(a=>a.date>=cs2&&a.date<=tdNow2);
+    // Trouver le cycle le plus ancien non encore basculé
+    const manualBMs=new Set((state.bascules_manuelles||[]).map(b=>b.cycleStart.slice(0,7)));
+    const currentBM2=cycleStart().slice(0,7);
+    // Construire la liste de tous les cycles passés non basculés (depuis les données)
+    const allItems=[...(state.revolut_virements||[]),...(state.cb_achats||[])];
+    const pastBMs=new Set();
+    allItems.forEach(it=>{
+      const bm=cycleStartFor(it.date).slice(0,7);
+      if(bm!==currentBM2) pastBMs.add(bm);
+    });
+    const nonBascules=[...pastBMs].filter(bm=>!manualBMs.has(bm)).sort();
+    // Cycle cible : le plus ancien non basculé, ou le cycle en cours si tout est à jour
+    const targetBM=nonBascules.length>0?nonBascules[0]:currentBM2;
+    const targetCS=targetBM+"-20";
+    // Fin du cycle = veille du prochain cycle (targetBM suivant + "-20" - 1 jour)
+    const targetCSDate=new Date(targetCS+"T00:00:00");
+    const nextCSDate=new Date(targetCSDate); nextCSDate.setMonth(nextCSDate.getMonth()+1);
+    const targetEnd=new Date(nextCSDate); targetEnd.setDate(targetEnd.getDate()-1);
+    const targetEndStr=targetEnd.toISOString().slice(0,10);
+    const isCurrentCycle=(targetBM===currentBM2);
+    const rangeEnd=isCurrentCycle?today():targetEndStr;
+    const virsCycle=(state.revolut_virements||[]).filter(v=>v.date>=targetCS&&v.date<=rangeEnd);
+    const cbCycle=(state.cb_achats||[]).filter(a=>a.date>=targetCS&&a.date<=rangeEnd);
     const totalVirsBascule=virsCycle.reduce((s,v)=>s+(v.amount||0),0);
     const totalCbBascule=cbCycle.reduce((s,a)=>s+(a.amount||0),0);
     const totalBascule=totalVirsBascule+totalCbBascule;
-    // Label du cycle : "juin 2026 (20→20)"
-    const csDate=new Date(cs2+"T00:00:00");
+    const csDate=new Date(targetCS+"T00:00:00");
     const cycleLbl=csDate.toLocaleDateString("fr-FR",{month:"long",year:"numeric"})+" (20→20)";
 
     const t=div("drawer-title"); t.textContent="🔁 Déclencher la bascule"; dc.appendChild(t);
+    if(nonBascules.length>1){
+      const pendingNote=div("info-box info-orange",{marginBottom:"1rem"});
+      pendingNote.textContent=`⚠️ ${nonBascules.length} cycles en attente — on commence par le plus ancien.`;
+      dc.appendChild(pendingNote);
+    }
     const sub=el("div"); sub.style.cssText="font-size:.82rem;color:#8080a0;margin-bottom:1.2rem;line-height:1.6;";
-    sub.innerHTML=`Cycle en cours&nbsp;: <strong style="color:#e8e0f8;">${cycleLbl}</strong><br>
+    sub.innerHTML=`Cycle&nbsp;: <strong style="color:#e8e0f8;">${cycleLbl}</strong><br>
 Virements&nbsp;: <strong style="color:#f48c06;">${fmt(totalVirsBascule)}</strong><br>
 Autres achats CB&nbsp;: <strong style="color:#f48c06;">${fmt(totalCbBascule)}</strong><br>
 <strong style="color:#fbbf24;">Total bascule&nbsp;: ${fmt(totalBascule)}</strong>`;
@@ -1514,11 +1537,10 @@ Autres achats CB&nbsp;: <strong style="color:#f48c06;">${fmt(totalCbBascule)}</s
     const dateInp2=mkInp("date","",today());
     f.appendChild(mkField("Date de la bascule",dateInp2));
     f.appendChild(mkFooter("Confirmer la bascule","btn-orange",()=>{
-      const bm=cs2.slice(0,7);
       state.bascules_manuelles.push({
         id:uid(),
         date:dateInp2.value||today(),
-        cycleStart:cs2,
+        cycleStart:targetCS,
         cycleLabel:cycleLbl,
         totalVirements:totalVirsBascule,
         totalCbAchats:totalCbBascule,
