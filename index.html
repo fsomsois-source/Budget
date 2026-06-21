@@ -130,14 +130,15 @@ label{font-size:.72rem;color:#606080;text-transform:uppercase;letter-spacing:.09
 <script>
 /* ── Default categories ── */
 const DEFAULT_CATS = [
-  {id:"logement",  label:"Logement",     icon:"🏠", weight:30},
-  {id:"alim",      label:"Alimentation", icon:"🛒", weight:20},
-  {id:"transport", label:"Transport",    icon:"🚗", weight:12},
-  {id:"sante",     label:"Santé",        icon:"💊", weight:8},
-  {id:"abos",      label:"Abonnements",  icon:"📱", weight:7},
-  {id:"loisirs",   label:"Loisirs",      icon:"🎉", weight:10},
-  {id:"vetements", label:"Vêtements",    icon:"👗", weight:6},
-  {id:"autre",     label:"Autre",        icon:"📦", weight:7},
+  {id:"logement",        label:"Logement",         icon:"🏠", weight:30},
+  {id:"alim",            label:"Alimentation",     icon:"🛒", weight:20},
+  {id:"transport",       label:"Transport",        icon:"🚗", weight:12},
+  {id:"sante",           label:"Santé",            icon:"💊", weight:8},
+  {id:"abos",            label:"Abonnements",      icon:"📱", weight:7},
+  {id:"loisirs",         label:"Loisirs",          icon:"🎉", weight:10},
+  {id:"vetements",       label:"Vêtements",        icon:"👗", weight:6},
+  {id:"virement_revolut",label:"Virement Revolut", icon:"💳", weight:7},
+  {id:"autre",           label:"Autre",            icon:"📦", weight:7},
 ];
 const DEBT_ICONS   = ["💳","🏦","🚗","🏥","📱","🏠","🎓","💼","⚡","👨‍👩‍👧"];
 const DEFAULT_INCOME_TYPES = ["💼 Freelance","🏆 Prime","🎁 Virement","📈 Investissement","🤝 Aide","💰 Autre","↩️ Remboursement"];
@@ -353,7 +354,8 @@ function renderDashboard(c){
   const nowM=new Date().toISOString().slice(0,7);
   const cycleS=cycleStart();
   const tdStr=today();
-  const totalVirementsBoard=(state.revolut_virements||[]).filter(v=>v.date>=cycleS&&v.date<=tdStr).reduce((s,v)=>s+(v.amount||0),0);
+  const totalVirementsBoard=(state.revolut_virements||[]).filter(v=>v.date>=cycleS&&v.date<=tdStr).reduce((s,v)=>s+(v.amount||0),0)
+    + state.expenses.filter(x=>x.catId==="virement_revolut"&&x.date>=cycleS&&x.date<=tdStr).reduce((s,x)=>s+(x.amount||0),0);
   const totalCreditsBoard=state.incomes.filter(x=>x.cbRevolut&&x.date>=cycleS&&x.date<=tdStr).reduce((a,x)=>a+(x.amount||0),0);
   const totalAchatsBoard=state.expenses.filter(x=>x.cbDiff&&x.date>=cycleS&&x.date<=tdStr).reduce((a,x)=>a+(x.amount||0),0)-totalCreditsBoard;
   const resteDebit2=Math.max(0,totalVirementsBoard-totalAchatsBoard);
@@ -559,7 +561,8 @@ function renderPlafond(c){
   const tdNow=today();
   const virements=state.revolut_virements||[];
   const virementsMonth=virements.filter(v=>v.date>=cs&&v.date<=tdNow);
-  const totalVirements=virementsMonth.reduce((s,v)=>s+(v.amount||0),0);
+  const virPonctuelsRevolut=state.expenses.filter(x=>x.catId==="virement_revolut"&&x.date>=cs&&x.date<=tdNow).reduce((s,x)=>s+(x.amount||0),0);
+  const totalVirements=virementsMonth.reduce((s,v)=>s+(v.amount||0),0)+virPonctuelsRevolut;
   const totalRevolut=state.incomes.filter(x=>x.cbRevolut&&x.date>=cs&&x.date<=tdNow).reduce((a,x)=>a+(x.amount||0),0); const totalAchats=state.expenses.filter(x=>x.cbDiff&&!x.cbCredit&&x.date>=cs&&x.date<=tdNow).reduce((a,x)=>a+(x.amount||0),0)-totalRevolut;
   const resteVirements=Math.max(0,totalVirements-totalAchats);
   // Barre = virements virés / plafond cible (si plafond défini)
