@@ -1487,18 +1487,17 @@ function openDrawer(type){
     ai.focus(); dc.appendChild(f);
   }
   else if(type==="bascule"){
-    // Trouver le cycle le plus ancien non encore basculé
+    // Trouver le cycle précédent non encore basculé manuellement
     const manualBMs=new Set((state.bascules_manuelles||[]).map(b=>b.cycleStart.slice(0,7)));
     const currentBM2=cycleStart().slice(0,7);
-    // Construire la liste de tous les cycles passés non basculés (depuis les données)
-    const allItems=[...(state.revolut_virements||[]),...(state.cb_achats||[])];
-    const pastBMs=new Set();
-    allItems.forEach(it=>{
-      const bm=cycleStartFor(it.date).slice(0,7);
-      if(bm!==currentBM2) pastBMs.add(bm);
-    });
-    const nonBascules=[...pastBMs].filter(bm=>!manualBMs.has(bm)).sort();
-    // Cycle cible : le plus ancien non basculé, ou le cycle en cours si tout est à jour
+    // Le cycle précédent = juste avant le cycle en cours
+    const prevCSDate=new Date(currentBM2+"-20T00:00:00");
+    prevCSDate.setMonth(prevCSDate.getMonth()-1);
+    const prevBM=prevCSDate.toISOString().slice(0,7);
+    // Si le cycle précédent n'est pas encore basculé manuellement → on le propose en priorité
+    const prevNotBascule=!manualBMs.has(prevBM);
+    const nonBascules=prevNotBascule?[prevBM]:[];
+    // Cycle cible : le précédent si non basculé, sinon le cycle en cours
     const targetBM=nonBascules.length>0?nonBascules[0]:currentBM2;
     const targetCS=targetBM+"-20";
     // Fin du cycle = veille du prochain cycle (targetBM suivant + "-20" - 1 jour)
